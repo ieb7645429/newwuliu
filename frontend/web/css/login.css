@@ -1,0 +1,49 @@
+body,p{ padding:0px; margin:0px}
+.bg{
+	background:url(../img/signin_bg.png) center no-repeat; 
+	width:100%;
+	height:1080px;
+	overflow:hidden;
+	position:relative
+}
+.form{
+	position:absolute;
+	bottom:430px;
+	width:100%;
+	margin:0px auto;
+
+}
+.btn{
+	background:url(../img/btn.png) no-repeat;
+	width:430px;
+	height:56px;
+	border:none
+}
+.wid{
+	width:430px;
+	height:60px;
+	margin:0px auto;
+ 
+}
+
+._input{
+	width:350px;
+	height:40px;
+	margin:6px 65px;
+	border:none;
+}
+.mt-25{
+	margin-top:27px
+
+}
+.mt-11{
+	margin-top:11px
+
+}
+.foot{
+	color:#FFF;
+	text-align:center;
+	position:absolute;
+	bottom:100px;
+	width:100%
+}

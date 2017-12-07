@@ -1,0 +1,33 @@
+@CHARSET "UTF-8";
+.create{
+	margin-top:20px;
+}
+.modal-dialog {
+    width:400px !important;
+}
+.payDiv{
+    margin:20px auto !important;
+}
+.pay-input{
+    height: 40px !important;
+    width: 300px !important;
+    margin: 0px auto !important;
+}
+.payPromptDiv{
+	height:30px;
+    line-height:30px;
+}
+.payPrompt{
+	text-align:center;
+	color:red;
+	display:none;
+}
+.payButtonDiv{
+    margin:15px auto !important;
+}
+.payButton{
+    text-align:center !important;
+}
+.payButton button{
+    width:100px !important;
+}

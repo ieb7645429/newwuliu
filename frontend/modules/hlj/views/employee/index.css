@@ -1,0 +1,10 @@
+@CHARSET "UTF-8";
+.div-print{
+	width:100px;
+	height:34px;
+	line-height:34px;
+	float:right;
+}
+.checkbox-input{
+	margin-left:5px !important;
+}

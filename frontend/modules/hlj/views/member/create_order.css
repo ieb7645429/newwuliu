@@ -1,0 +1,52 @@
+@CHARSET "UTF-8";
+.title_bg{
+        width: 100%;
+        height: 30px;
+        background: #d7d7d7;
+    }
+    .title_bg span{
+        width: 100px;
+        display: block;
+        height: 30px;
+        line-height: 30px;
+        margin-left: 10px;
+        font-family:'微软雅黑';
+    }
+    .row{
+        margin:0px !important;
+    }
+    .form-control{
+        display:inline !important;
+        width:130px !important;
+        padding:0px !important;
+        height:25px !important;
+        font-size:12px !important;
+        margin-left:10px !important;
+        padding-left:5px !important;
+    }
+    .control-label{
+        font-weight:normal !important;
+        font-family:'微软雅黑' !important;
+    }
+    .table01{
+        overflow:hidden;
+        margin-top:10px;
+        font-family:'微软雅黑' !important;
+    }
+    .table_div{
+        float:left;
+        width:230px;
+    }
+    .area_div .form-control{
+        width:500px !important;
+    }
+    .table_div_02{
+        float:left;
+        width:250px;
+    }
+    .goods_input{
+        width:150px;
+    }
+    .add-button{
+        margin-top:20px !important;
+    }

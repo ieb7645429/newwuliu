@@ -1,0 +1,29 @@
+@CHARSET "UTF-8";
+.form-group{
+	width:400px;
+}
+.driver-list{
+       border-radius: 4px;
+       position: relative;
+        padding: 5px;
+        float:left;
+        margin-left: 5px;
+        margin-bottom: 5px;
+        background-color: #fff;
+        border: 1px solid #ddd;
+        text-decoration: none;
+        cursor: pointer;
+    }
+    .driver-active{
+       background:#d9534f !important;
+       border:1px solid #d9534f;
+       color:#fff;
+    }
+    .driver-list.disabled, .driver-list[disabled]{
+    cursor: not-allowed;
+    filter: alpha(opacity=65);
+    -webkit-box-shadow: none;
+    box-shadow: none;
+    opacity: .65
+    }
+    

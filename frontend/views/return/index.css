@@ -1,0 +1,30 @@
+@CHARSET "UTF-8";
+.form-group{
+        width:50%;
+    }
+    .pay-input{
+        height: 40px !important;
+        width: 300px !important;
+        margin: 0px auto !important;
+    }
+    .payButtonDiv{
+        margin:15px auto !important;
+    }
+    .payDiv{
+        margin:20px auto !important;
+    }
+    .payButtonDiv{
+        margin:15px auto !important;
+    }
+    .payButton{
+        text-align:center !important;
+    }
+    .create{
+    margin-top:20px;
+    }
+    .modal-dialog {
+        width:400px !important;
+    }
+    .payDiv{
+        margin:20px auto !important;
+    }
