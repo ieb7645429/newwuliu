@@ -8,6 +8,7 @@ use frontend\models\SignupForm;
 use common\yjmodels\Seller;
 use common\yjmodels\Store;
 use common\yjmodels\Member;
+use yii\db\Exception;
 /**
  * User model
  *
@@ -120,6 +121,36 @@ class User extends ActiveRecord
 			    'small_num' => '会员小号',
         ];
     }
+
+    /**
+     * 返回注册用户主键
+     * @Author:Fenghuan
+     * @param $model
+     * @return $user
+     * @throws Exception
+     */
+    public function createUser($model)
+    {
+//        $model = new CreateUserForm();
+        $userInfo = User::findByUsername($model->username);
+        if ($userInfo) {
+            throw new Exception('用户已存在');
+
+        } else {
+            if (!$user = $model->signup()) {
+                throw new Exception('用户注册失败');
+            }
+
+            return $user;
+        }
+
+    }
+
+//    public function getUserJoinDriver()
+//    {
+//        return $this->hasOne(Driver::className(), ['member_id' => 'id']);
+//    }
+
     
     /**
      * 判断是否买断
@@ -181,7 +212,14 @@ class User extends ActiveRecord
 	   $flag  = '';
        $value = self::findByUsername($data['user']);
 	   $this->password_hash = $value->password_hash;
-	   if($this->validatePassword($data['pwd']))
+	   //2017-11-15，扫码登陆不需要验证密码
+       if(empty($type)){
+	     $pwd = true;
+	   }
+	   else{
+	     $pwd = $this->validatePassword($data['pwd']);
+	   }
+	   if($pwd)
 	   {
 		 $this->generateAuthKey();//获取tonken
 		 $token = $this->auth_key;

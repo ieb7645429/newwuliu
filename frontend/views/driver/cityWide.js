@@ -34,25 +34,15 @@ $('.operation').click(function(){
     		return false;
     	}
     	var getObj = $(this);
-        var chk_value =[];
-        $('input[name="print"]:checked').each(function(){
-            chk_value.push($(this).val()); 
-        });
-        if(chk_value.length==0){
+    	var count = $('#count_js').val();
+        if(count==0||count=='0'){
             alert('请选择打印订单');
             return false;
         }
         getObj.attr('disabled','disabled');
-        var data = {
-            'order_sn':$('.orderSn').val(),
-            'goods_sn':$('.goodsSn').val(),
-            'order_arr':chk_value
-            
-        };
         $.ajax({
              type: "post",
              url:'?r=driver/city-wide-print',
-             data:data,
              async:true,
              success:function(data){
             	//两秒后执行          	 
@@ -81,26 +71,15 @@ $('.operation').click(function(){
     		return false;
     	}
     	var getObj = $(this);
-        var chk_value =[];
-        $('input[name="print"]:checked').each(function(){
-            chk_value.push($(this).val()); 
-        });
-        if(chk_value.length==0){
+    	var count = $('#count_js').val();
+        if(count==0||count=='0'){
             alert('请选择打印订单');
             return false;
         }
         getObj.attr('disabled',true);
-        var data = {
-            'order_sn':$('.orderSn').val(),
-            'goods_sn':$('.goodsSn').val(),
-            'order_arr':chk_value
-            
-        };
-        
         $.ajax({
              type: "post",
              url:'?r=driver/city-wide-print',
-             data:data,
              async:true,
              success:function(data){
             	//两秒后执行          	 
@@ -128,11 +107,8 @@ $('.operation').click(function(){
     		return false;
     	}
     	var getObj = $(this);
-        var chk_value =[];
-        $('input[name="print"]:checked').each(function(){
-            chk_value.push($(this).val()); 
-        });
-        if(chk_value.length==0){
+    	var count = $('#count_js').val();
+        if(count==0||count=='0'){
             alert('请选择打印订单');
             return false;
         }
@@ -195,38 +171,6 @@ $('.operation').click(function(){
     	
     })
     
-     
-	$('#check_all').change(function(){
-		 if($('#check_all').is(':checked')){
-	       $('.order_check').each(function(){
-	         if(!$(this).prop('disabled')){
-	            $(this).prop('checked',true);
-	         }
-	       })
-	     }else{
-	       $('input[type=checkbox]').prop('checked',false);
-	     }
-		 //计算选中数量
-		   CountCheckBox();
-		
-	});
-	//点击单个checkbox计算
-	$('input[name=print]').change(function(){
-	    CountCheckBox();
-	});
-	//统计checkbox选中数量
-	function CountCheckBox(){
-	 var count = 0;
-	 $("input[name=print]").each(function(){
-		 if($(this).is(':checked')){ 
-			count+=1;
-		 }
-	 });
-	 console.log(count);
-	 $('#count').html(count);
-	}
-	
-	
 	//小码单是否全部打印修改
 	$('#checkbox-input').click(function(){
 		var obj = $(this);

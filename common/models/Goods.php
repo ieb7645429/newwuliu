@@ -145,6 +145,7 @@ class Goods extends \yii\db\ActiveRecord
      */
     public function goodsStateEdit($data, $goodsState){
     	$data->goods_state = $goodsState;
+    	$data->update_time= time();
     	return $data->save();
     }
     
@@ -322,8 +323,9 @@ class Goods extends \yii\db\ActiveRecord
      * @param unknown $arr
      */
     public function getGoodsArr($arr){
-        $goods = $this::find()->select('goods_id')->where(['in','order_id',$arr])->asArray()->all();
+        $goods = $this::find()->select('goods_id')->where(['and',['goods_state'=>10],['in','order_id',$arr]])->asArray()->all();
         $goods_arr = array();
+
         foreach($goods as $key => $value){
             $goods_arr[] = $value['goods_id'];
         }

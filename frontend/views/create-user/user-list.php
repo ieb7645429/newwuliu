@@ -16,7 +16,7 @@ $this->params['leftmenus'] = $menus;
             'username',
             [
                 'class' => 'yii\grid\ActionColumn',
-                'template' => '{update}',
+                'template' => '{update}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{unbind}',
                 'buttons' => [
                     'update' => function ($url, $model, $key) {
                         $options = [
@@ -25,6 +25,14 @@ $this->params['leftmenus'] = $menus;
                             'data-pjax' => '0',
                         ];
                         return Html::a('修改', $url, $options);
+                 },
+				  'unbind' => function ($url, $model, $key) {
+                        $options = [
+                            'title' => Yii::t('yii', 'View'),
+                            'aria-label' => Yii::t('yii', 'View'),
+                            'data-pjax' => '0',
+                        ];
+                        return Html::a('清空银行卡信息', $url, $options);
                  },
                 ]
             ],

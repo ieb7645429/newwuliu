@@ -36,24 +36,15 @@ $(function(){
     	if(!confirm("是否选择打印？")){
      		return false;
      	} 
-        var chk_value =[];
-        $('input[name="print"]:checked').each(function(){
-            chk_value.push($(this).val()); 
-        });
-        if(chk_value.length==0){
+    	var count = $('#count_js').val();
+        if(count==0||count=='0'){
             alert('请选择打印订单');
             return false;
         }
-        var data = {
-            'order_sn':$('.orderSn').val(),
-            'goods_sn':$('.goodsSn').val(),
-            'order_arr':chk_value
-            
-        };
+        
         $.ajax({
              type: "post",
              url:'?r=terminus/goods-print-other',
-             data:data,
              async:true,
              success:function(data){
                 var obj = $.parseJSON(data);
@@ -75,24 +66,14 @@ $(function(){
     	if(!confirm("是否选择打印？")){
      		return false;
      	} 
-        var chk_value =[];
-        $('input[name="print"]:checked').each(function(){
-            chk_value.push($(this).val()); 
-        });
-        if(chk_value.length==0){
+    	var count = $('#count_js').val();
+        if(count==0||count=='0'){
             alert('请选择打印订单');
             return false;
         }
-        var data = {
-            'order_sn':$('.orderSn').val(),
-            'goods_sn':$('.goodsSn').val(),
-            'order_arr':chk_value
-            
-        };
         $.ajax({
              type: "post",
              url:'?r=terminus/goods-print-other',
-             data:data,
              async:true,
              success:function(data){
                 var obj = $.parseJSON(data);
@@ -112,22 +93,14 @@ $(function(){
     	if(!confirm("是否选择批量完成？")){
      		return false;
      	} 
-    	var chk_value =[];
-        $('input[name="print"]:checked').each(function(){
-            chk_value.push($(this).val()); 
-        });
-        if(chk_value.length==0){
+    	var count = $('#count_js').val();
+        if(count==0||count=='0'){
             alert('请选择打印订单');
             return false;
         }
-        var data = {
-            'order_arr':chk_value
-                
-        };
         $.ajax({
             type: "post",
             url:'?r=terminus/ajax-all-over',
-            data:data,
             async:true,
             success:function(data){
                var obj = $.parseJSON(data);
@@ -144,15 +117,5 @@ $(function(){
     	
     	
     })
-    $('#check_all').change(function(){
-		 if($('#check_all').is(':checked')){
-	       $('.order_check').each(function(){
-	         if(!$(this).prop('disabled')){
-	            $(this).prop('checked',true);
-	         }
-	       })
-	     }else{
-	       $('input[type=checkbox]').prop('checked',false);
-	     }
-	})
+    
 })

@@ -5,6 +5,7 @@ use yii\widgets\DetailView;
 use common\models\ShippingTpye;
 use common\models\Area;
 use common\models\GoodsInfo;
+use backend\models\OrderRemark;
 
 /* @var $this yii\web\View */
 /* @var $model common\models\LogisticsOrderDelete */
@@ -103,6 +104,13 @@ $this->params['leftmenus'] = $menus;
                     return GoodsInfo::getGoodsInfoById($model->order_id);
                 },
             ],
+            [
+                'attribute' => 'delContent',
+                'label' => '删除备注',
+                'value' => function($model){
+                    return OrderRemark::getDelContent($model->order_id);
+                }
+            ]
 
 //             'logistics_route_id',
         ],

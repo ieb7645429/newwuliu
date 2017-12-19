@@ -131,4 +131,31 @@ class UserSearch extends User
         
         return $dataProvider;
     }
+	/**
+	*  临时修改银行信息查询
+	*  2017-11-12
+	*  xiaoyu
+	**/
+	 public function editSearch_temp($params){
+        $query = User::find();
+        
+        // add conditions that should always apply here
+        
+        $dataProvider = new ActiveDataProvider([
+                'query' => $query,
+        ]);
+        
+        $this->load($params);
+        
+        // grid filtering conditions
+      
+        
+        $query->Where(['=', 'username', $this->username]);
+        
+        $query->join('INNER JOIN','auth_assignment','auth_assignment.user_id = user.id');
+        
+        //         $query->andFilterWhere(['id'=>Yii::$app->user->id]);
+        
+        return $dataProvider;
+    }
 }

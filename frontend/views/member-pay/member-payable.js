@@ -1,4 +1,5 @@
 $(function(){
+	getCreateType($('#count').val());
 	var withdrawal_amount = $('#withdrawal_amount').val();
 	var reg = new RegExp("^[0-9]*$");
 	$(document).on('input propertychange','#money',function(){
@@ -20,19 +21,10 @@ $(function(){
 		if(!confirm("是否确定提现？")){
 			return false;
 		}
-		var order_arr = [];
-		$('input[name="order_arr[]"]:checked').each(function(){
-            order_arr.push($(this).val()); 
-        });
-		var data = {
-                'amount':parseInt($('#money').val()),
-                'order_arr':order_arr,
-            };
 		$(this).attr('disabled','disabled');
 		$.ajax({
             type: 'post',
             url:'?r=member-pay/with-drawal',
-            data:data,
             dataType:'json',
             async:true,
             success:function(data){
@@ -46,6 +38,66 @@ $(function(){
              }
            })
 	})
+	$('.select-on-check-all').on('change',function(){
+		var order_arr =[];
+		 $('.checkbox').each(function(){
+             order_arr.push($(this).val()); 
+         });
+		goCookie($(this),order_arr);
+	})
 	
+	$('.checkbox').on('change',function(){
+		goCookie($(this),[$(this).val()]);
+	})
 	
+	function goCookie(obj,order_arr){
+		
+		if(obj.is(':checked')){
+			var url = '?r=member-pay/add-cookie';
+		}else{
+			var url = '?r=member-pay/del-cookie';
+		}
+		$.ajax({
+            type: 'post',
+            url:url,
+            data:{order_arr:order_arr},
+            dataType:'json',
+            async:false,
+            success:function(data){
+            	console.log(data);
+	              $('#count').val(data);
+	              getCreateType(data);
+             }
+       })
+	}
+	
+	$(document).on('click', '#create', function () {
+        var count = $('#count').val();
+        if(count>0){
+            $('#confirm').prop('disabled',false);
+            $.ajax({
+                type: 'post',
+                url:'?r=member-pay/get-total',
+                dataType:'json',
+                async:false,
+                success:function(data){
+                    $('#money').attr({'value':data});
+                 }
+            })
+            
+        }else{
+            alert('请选择提现订单');
+            $('#money').attr({'value':'0'});
+            $('#confirm').prop('disabled',true);
+            return false;
+        }
+    });
+	
+	function getCreateType($count){
+		if($count>0){
+            $('#create').attr({'data-target':'#create-modal'});
+         }else{
+            $('#create').attr({'data-target':'#create-null'});
+         }
+	}
 })

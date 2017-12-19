@@ -11,7 +11,7 @@ $this->title = '封车';
 $this->params['breadcrumbs'][] = $this->title;
 $this->params['leftmenus'] = $menus;
 ?>
-<?php $form = ActiveForm::begin(['method'=>'get'])?>
+<?php $form = ActiveForm::begin(['action'=>['driver-manager/city-wide'],'method'=>'get'])?>
     <?= $form->field($LogisticsOrder, 'logistics_sn',['labelOptions' => ['label' => Yii::$app->params['logistics_sn']]])->textInput(['value' => $params['logistics_sn']]) ?>
     <?= $form->field($goods, 'goods_sn',['labelOptions' => ['label' => Yii::$app->params['goods_sn']]])->textInput(['value' => $params['goods_sn']]) ?>
     <?= $form->field($orderTime, 'ruck_time')->label('封车时间')->widget(DateRangePicker::classname(), [
@@ -36,9 +36,13 @@ $this->params['leftmenus'] = $menus;
     <?php echo Html::button('打印小码单', ['class'=>'btn btn-primary js-small-print']) ?>
     <div class="div-print">小码单全部打印<input id="checkbox-input" class="checkbox-input" type="checkbox" <?php if($is_print==1) echo 'checked';?>></div>
 	</div>
+
 <?php ActiveForm::end()?>
+<?= LinkPager::widget(['pagination' => $pages]); ?>
 <div class="body-content">
 <input type="hidden" id="driver_id" value="<?php echo $driver_id?>">
+<input type="hidden" id="count_js" value="<?=$count;?>">
+<input type="hidden" id="rule" value=<?= $rule?> >
 </div>
 <?php if(!empty($orderList)){?>
     <table class="table tableTop">
@@ -46,7 +50,7 @@ $this->params['leftmenus'] = $menus;
        <tbody>
        <thead>
        <tr class="row">
-              <div > 当前已选中<strong id="count"><?=count($orderList);?></strong>项</div>
+              <div > 当前已选中<strong id="count"><?=$count;?></strong>项</div>
           </tr>
               <tr class="tableBg">
               <th width="80px"><?= Html::checkbox('all',true,['style'=>'margin-right:5px','id'=>'check_all']);?>全选</th>
@@ -67,7 +71,7 @@ $this->params['leftmenus'] = $menus;
         ?>
             
           <tr class="info goodsTableTr_<?= $value['order_id']?>">
-          <td><?= Html::checkbox('print',true,['class'=>'order_check checkbox'.$value['order_id'],'value' => $value['order_id']]);?></td>
+          <td><?= Html::checkbox('print',in_array($value['order_id'],$order_arr)||!isset($_GET['page'])?true:false,['class'=>'order_check checkbox'.$value['order_id'],'value' => $value['order_id']]);?></td>
              <td><?php echo $value['logistics_sn']; ?></td>
              <td><?php if($value['order_type']==1) echo '西部';if($value['order_type']==3) echo '瑞胜'; ?></td>
              <td><?php echo $value['goods_price']; ?></td>

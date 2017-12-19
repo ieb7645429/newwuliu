@@ -1,8 +1,16 @@
 $(function(){
 	$('.operation').click(function(){
 		var order_id = $(this).data('orderId');
+		setTimeout(function(){
+			$('#sender').focus();
+		},500);
 		console.log(order_id);
 		$('#order_id').val(order_id);
+	})
+	$('#sender').keydown(function(event){ //回车键
+		if(event.keyCode==13){ 
+		$("#confirm").click(); 
+		}
 	})
 	$('#confirm').click(function(){
 		if($('#sender').val()==''){
@@ -45,25 +53,15 @@ $(function(){
      		return false;
      	}
     	var getObj = $(this);
-        var chk_value =[];
-        $('input[name="print"]:checked').each(function(){
-            chk_value.push($(this).val()); 
-        });
-        if(chk_value.length==0){
+    	var count = $('#count_js').val();
+        if(count==0||count=='0'){
             alert('请选择打印订单');
             return false;
         }
-        var data = {
-            'order_sn':$('.orderSn').val(),
-            'goods_sn':$('.goodsSn').val(),
-            'order_arr':chk_value
-            
-        };
         getObj.attr('disabled','disabled');
         $.ajax({
              type: "post",
              url:'?r=return-complete/return-print',
-             data:data,
              async:true,
              success:function(data){
             	 getObj.attr('disabled',false);

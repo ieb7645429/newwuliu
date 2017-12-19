@@ -10,7 +10,7 @@ $this->title = '可提现余额';
 $this->params['breadcrumbs'][] = $this->title;
 $this->params['leftmenus'] = $menus;
 echo Html::a('申请提现', '#', [
-        'id' => 'create',
+        'id' => 'create_all',
         'data-toggle' => 'modal',
         'data-target' => '#create-modal',
         'class' => 'btn btn-success create',
@@ -78,12 +78,12 @@ $requestUrl = Url::toRoute('payable-div');
 //             'id',
 //             'uid',
                 'amount',
-                [
-                'attribute' => 'add_time',
-                'value' => function ($model) {
-                return date('Y-m-d H:i:s',$model->add_time);
-                }
-                ],
+//                 [
+//                 'attribute' => 'add_time',
+//                 'value' => function ($model) {
+//                 return date('Y-m-d H:i:s',$model->add_time);
+//                 }
+//                 ],
 //             [
 //                 'label' => '操作前金额',
 //                 'attribute' => 'before_amount'

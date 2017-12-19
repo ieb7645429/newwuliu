@@ -164,7 +164,9 @@ class SiteController extends Controller
             return $this->redirect(Url::to(['user/reset-pwd']));
         } else if (in_array('查询线路',$roles)){
             return $this->redirect(Url::to(['customer/index']));
-        } elseif (in_array('用户管理密码修改',$roles)){
+        } else if ((in_array('添加线路',$roles))){
+            return $this->redirect(Url::to(['addition/modification']));
+        }elseif (in_array('用户管理密码修改',$roles)){
             return $this->redirect(Url::to(['user/reset-pwd']));
         }elseif (in_array('西部退货组',$roles)){
             return $this->redirect(Url::to(['return/index']));

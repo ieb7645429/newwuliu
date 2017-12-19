@@ -43,7 +43,7 @@ class AuthItem extends \yii\db\ActiveRecord
             [['description', 'data'], 'string'],
             [['name', 'rule_name'], 'string', 'max' => 64],
             [['name'], 'unique'],
-            [['rule_name'], 'exist', 'skipOnError' => true, 'targetClass' => AuthRule::className(), 'targetAttribute' => ['rule_name' => 'name']],
+//            [['rule_name'], 'exist', 'skipOnError' => true, 'targetClass' => AuthRule::className(), 'targetAttribute' => ['rule_name' => 'name']],
         ];
     }
 
@@ -53,7 +53,7 @@ class AuthItem extends \yii\db\ActiveRecord
     public function attributeLabels()
     {
         return [
-            'name' => 'Name',
+            'name' => '角色名',
             'type' => 'Type',
             'description' => 'Description',
             'rule_name' => 'Rule Name',
@@ -61,6 +61,27 @@ class AuthItem extends \yii\db\ActiveRecord
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',
         ];
+    }
+
+    /**
+     * 获取角色列表
+     * @Author:Fenghuan
+     * @param $condition
+     * @return mixed
+     */
+    public function getRolesList($condition)
+    {
+        return self::find()->select('name')->where($condition)->indexBy('name')->column();
+    }
+
+    /**
+     * @Author:Fenghuan
+     * @param $id
+     * @return null|static
+     */
+    public static function findModel($id)
+    {
+        return self::findOne($id);
     }
 
     /**

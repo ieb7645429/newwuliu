@@ -63,9 +63,11 @@ class WithdrawalOrder extends \yii\db\ActiveRecord
      */
     public function addWithdrawalOrder($order_sn,$type = 0,$user_id,$amount){
         if(empty($this::findOne(['order_sn'=>$order_sn]))){
+                $apply = new ApplyForWithdrawal();
                 $this->order_sn = $order_sn;
-                $this->add_time = 0;
+                $this->add_time = $type==1?time():0;
                 $this->is_withdrawal = $type;
+                $this->apply_id = $type==1?$apply->find()->where(['user_id'=>Yii::$app->user->id])->max('id'):0;
                 $this->user_id = $user_id;
                 $this->amount = $amount;
                 return $this->save();
@@ -83,10 +85,11 @@ class WithdrawalOrder extends \yii\db\ActiveRecord
     public function editWithdrawalOrder($order_sn){
         $apply = new ApplyForWithdrawal();
         $userBalance = new UserBalance();
-        if($userBalance::findOne(Yii::$app->user->id)->is_withdrawal==1)//订单提现状态 添加关联提现记录
-            $apply_id = $apply->getNewId();
-        else
-            $apply_id = 0;
+//         if($userBalance::findOne(Yii::$app->user->id)->is_withdrawal==1)//订单提现状态 添加关联提现记录
+//             $apply_id = $apply->getNewId();
+//         else
+//             $apply_id = 0;
+        $apply_id = $apply->find()->where(['user_id'=>Yii::$app->user->id])->max('id');
         $orderWithdrawal = $this::findOne(['order_sn'=>$order_sn]);
         $orderWithdrawal->is_withdrawal = 1;
         $orderWithdrawal->add_time = time();
@@ -112,5 +115,20 @@ class WithdrawalOrder extends \yii\db\ActiveRecord
     public function getOrderSn()
     {
         return $this->hasOne(LogisticsOrder::className(), ['logistics_sn' => 'order_sn']);
+    }
+    
+    public function getChecked($order_sn){
+        $cookies = Yii::$app->request->cookies;
+        if(isset($cookies['checkbox'])){
+            $order_str = $cookies->get('checkbox');
+            $order_arr = explode('-',$order_str);
+            if(in_array($order_sn,$order_arr)){
+                return true;
+            }else{
+                return false;
+            }
+        }else{
+            return false;
+        }
     }
 }

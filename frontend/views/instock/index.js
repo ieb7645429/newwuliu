@@ -33,25 +33,15 @@ $(function(){
      		return false;
      	}
     	var getObj = $(this);
-    	var chk_value =[];
-        $('input[name="print"]:checked').each(function(){
-            chk_value.push($(this).val()); 
-        });
-        if(chk_value.length==0){
+    	var count = $('#count_js').val();
+        if(count==0||count=='0'){
             alert('请选择打印订单');
             return false;
         }
         getObj.attr('disabled','disabled');
-        var data = {
-                'order_sn':$('.orderSn').val(),
-                'goods_sn':$('.goodsSn').val(),
-                'order_arr':chk_value
-                
-            };
         $.ajax({
              type: "post",
              url:'?r=instock/goods-print',
-             data:data,
              async:true,
              success:function(data){
                 getObj.attr('disabled',false);
@@ -73,28 +63,26 @@ $(function(){
      		return false;
      	}
         var getObj = $(this);
-        var chk_value =[];
-        $('input[name="print"]:checked').each(function(){
-            chk_value.push($(this).val()); 
-        });
-        if(chk_value.length==0){
+        var count = $('#count_js').val();
+        if(count==0||count=='0'){
             alert('请选择打印订单');
             return false;
         }
-        var data = {
-            'order_arr':chk_value
-        };
         getObj.attr('disabled','disabled');
         $.ajax({
              type: "post",
              url:'?r=instock/goods-batch-edit',
-             data:data,
              dataType:'json',
              async:true,
              success:function(data){
                 getObj.attr('disabled',false);
                 alert(data.message);
-                location.replace(location.href);
+                console.log(data.data);
+                for(var i=0;i<data.data.length;i++){
+                	$('.order_'+data.data[i]).removeClass('operation').addClass('finish');
+                }
+               
+//                location.replace(location.href);
             }
       });
     })
@@ -103,22 +91,15 @@ $(function(){
      		return false;
      	}
         var getObj = $(this);
-    	var chk_value =[];
-        $('input[name="print"]:checked').each(function(){
-            chk_value.push($(this).val()); 
-        });
-        if(chk_value.length==0){
-            alert('请选择提交订单');
+        var count = $('#count_js').val();
+        if(count==0||count=='0'){
+            alert('请选择打印订单');
             return false;
         }
         getObj.attr('disabled','disabled');
-        var data = {
-        		'order_arr':chk_value
-        };
         $.ajax({
              type: "post",
              url:'?r=instock/order-edit',
-             data:data,
              async:true,
              success:function(data){
             	 getObj.attr('disabled',false);
@@ -133,17 +114,7 @@ $(function(){
             }
       });
     })
-    $('#check_all').change(function(){
-		 if($('#check_all').is(':checked')){
-	       $('.order_check').each(function(){
-	         if(!$(this).prop('disabled')){
-	            $(this).prop('checked',true);
-	         }
-	       })
-	     }else{
-	       $('input[type=checkbox]').prop('checked',false);
-	     }
-	})
+    
 })/**
  * 
  */

@@ -20,23 +20,26 @@ $(function(){
               }
             });
         });
-        
-     $('#check_all').change(function(){
-    	 if($('#check_all').is(':checked')){
-	        $('.order_check').each(function(){
-	          if(!$(this).prop('disabled')){
-	             $(this).prop('checked',true);
-	          }
-	        })
-	      }else{
-	        $('input[type=checkbox]').prop('checked',false);
-	      }
-     })
-     
-     //大司机 司机切换
+
+    // $('#handle-button').click(function () {
+    //
+    //     var checkedArr = [];
+    //     var i = 0;
+    //     $('.order_check').each(function(){
+    //
+    //         if($(this).prop('checked')){
+    //             checkedArr[i] = $(this).val();
+    //             i ++ ;
+    //         }
+    //     });
+    //
+    //     console.log(checkedArr);
+    // });
+    //大司机 司机切换
      $('.driver-list').click(function(){
     	 var obj = $(this);
     	 var driver_id = obj.data('driverId');
+    	 var rule = $('#rule').val();
     	 var data = {
     			 driver_id:driver_id,
     	 }
@@ -51,7 +54,7 @@ $(function(){
              success:function(data){
                 obj.attr('disabled',false);
                 alert(data.message);
-                location.replace(location.href);
+                location.replace(window.location.pathname+'?r='+rule);
               }
             });
         
@@ -64,17 +67,13 @@ $(function(){
      		return false;
      	}
      	var getObj = $(this);
-         var chk_value =[];
-         $('input[name="print"]:checked').each(function(){
-             chk_value.push($(this).val()); 
-         });
-         if(chk_value.length==0){
+     	var count = $('#count_js').val();
+         if(count==0||count=='0'){
              alert('请选择提交订单');
              return false;
          }
          getObj.attr('disabled','disabled');
          var data = {
-                 'order_arr':chk_value,
                  'driver_id':$('#driver_id').val(),
              };
          $.ajax({
@@ -85,12 +84,77 @@ $(function(){
              success:function(data){
              	getObj.attr('disabled',false);
                 var obj = $.parseJSON(data);
-                   alert(obj.message);
+                   // alert(obj.message);
                    location.replace(location.href);
             }
-         });
+         })
      	
      	
      })
+    /**
+     * 批量扫码
+     */
+    $('.js-goods-submit').click(function(){
+        if(!confirm("是否选择提交订单？")){
+            return false;
+        }
+        var getObj = $(this);
+        var count = $('#count_js').val();
+        if(count==0||count=='0'){
+            alert('请选择提交订单');
+            return false;
+        }
+        getObj.attr('disabled','disabled');
+        var data = {
+            'user_id':$('#driver_id').val(),
+        };
+        $.ajax({
+            type: "post",
+            url:'?r=driver/ajax-batch-scan',
+            data:data,
+            async:true,
+            dataType:'json',
+            success:function(data){
+                console.log(data);
+                getObj.attr('disabled',false);
+                if(data.error==1){
+                    alert(data.message);
+                }else{
+                    alert(data.message);
+                    location.replace(location.href);
+                }
+            }
+        });
+
+
+    })
+    //外阜司机打印
+    $('.js-print').click(function(){
+    	if(!confirm("是否选择打印？")){
+    		return false;
+    	} 
+        var getObj = $(this);
+        var count = $('#count_js').val();
+        if(count==0||count=='0'){
+            alert('请选择提交订单');
+            return false;
+        }
+        getObj.attr('disabled','disabled');
+        $.ajax({
+             type: "post",
+             url:'?r=driver/goods-print',
+             async:true,
+             success:function(data){
+                getObj.attr('disabled',false);
+                var obj = $.parseJSON(data);
+                if(obj.error==1){
+                   console.log(obj.message);
+                }else{
+                   console.log(obj.data);
+                	printreceipt(obj.data);
+                }
+            }
+      });
+    });
         
 });

@@ -1,9 +1,23 @@
 $(function(){
+	var logistics_sn = $("input[name='LogisticsReturnOrderSearch[logistics_sn]']");
+	if(logistics_sn.val()){
+		logistics_sn.focus().select();
+	}
+	
+	
 $('.operation').click(function(){
 		var order_id = $(this).data('orderId');
+		setTimeout(function(){
+			$('#sender').focus();
+		},500);
 		console.log(order_id);
 		$('#order_id').val(order_id);
 	})
+$('#sender').keydown(function(event){ //回车键
+	if(event.keyCode==13){ 
+	$("#confirm").click(); 
+	}
+})
 $('#confirm').click(function(){
 		if($('#sender').val()==''){
 			alert('送货人不能为空');
@@ -37,4 +51,14 @@ $('#confirm').click(function(){
               }
             })
 	})
+ $('#searchButton').click(function(){
+	 $("#download_type").val('0');
+     $('#w0').attr('target', "_self");
+     $('#w0').submit();
+ })
+ $('#downloadExcel').click(function(){
+	 $("#download_type").val('1');
+     $('#w0').attr('target', "_blank");
+     $('#w0').submit();
+ })
 })

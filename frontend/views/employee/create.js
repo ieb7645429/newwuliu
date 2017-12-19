@@ -627,6 +627,15 @@ function getMemberInfo(type){
                     function(data){
                    // console.log(data);
                         if(data.code == 200 && data.datas) {
+                        	if($('#hidname').val() != $('#user-username').val())
+                        		{
+                        		$('#hidname').val(data.datas.username);
+                        			if(data.datas.youjian_order != '' )
+	                        		{
+	                        			alert('当前用户有线上订单');
+	                        		}
+                        		}
+                        	
 							$('#user-username').val(data.datas.username);
                             $('#logisticsorder-member_phone').val(data.datas.member_phone);
 							$('#logisticsorder-member_name').attr('data-id',data.datas.id);
@@ -674,7 +683,7 @@ function SearchMemberName(Name){
 }
 
 //提交表单
-$('#submitButton').click(function(){
+$('#submitButton,#submitButton2').click(function(){
 	$(this).attr('disabled','disabled');
 	if(!confirm("是否确认发货？")){
 		$(this).attr('disabled',false);

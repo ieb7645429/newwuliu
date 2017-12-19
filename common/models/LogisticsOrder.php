@@ -13,6 +13,7 @@ use backend\models\IncomeDriver;
 use backend\models\ReturnIncomeDealer;
 use backend\models\PayDealer;
 use backend\models\OrderRemark;
+use backend\models\OrderTellerRemark;
 
 
 /**
@@ -81,6 +82,10 @@ class LogisticsOrder extends \yii\db\ActiveRecord
             ['goods_num', 'required'],
             ['goods_num', 'integer', 'min'=>1],
         ];
+    }
+    
+    public function attributes(){
+        return array_merge(parent::attributes(),['userUsername','driverUsername','trueUsername','areaAreaname','breaAreaname','routeName']);
     }
 
     /**
@@ -323,7 +328,7 @@ class LogisticsOrder extends \yii\db\ActiveRecord
         return $this->hasOne(OrderPrintLog::className(), ['order_id'=>'order_id']);
     }
     /****联合查询结束******/
-    
+
     public static function getCollectionList() {
         return [
             '1' => '代收',
@@ -414,7 +419,12 @@ class LogisticsOrder extends \yii\db\ActiveRecord
     public function getGoodsPriceStateName($goodsPriceState) {
         $return = [];
         if ($goodsPriceState & 8) {
-            $return[] = '已收款';
+            $advance = OrderAdvance::findOne(['order_id' => $this->order_id]);
+            if($advance && $advance->state == 2) {
+                $return[] = '已垫付';
+            } else {
+                $return[] = '已收款';
+            }
         }
         if ($goodsPriceState & 1) {
             $return[] = '已进用户余额';
@@ -449,6 +459,10 @@ class LogisticsOrder extends \yii\db\ActiveRecord
             return '';
         }
         return User::findOne($driverId)->user_truename;
+    }
+    
+    public function getRemarkContent($orderId) {
+        return OrderTellerRemark::getLastContent($orderId ? $orderId : $this->order_id);
     }
     
     public function getMemberCityName()
@@ -651,7 +665,7 @@ class LogisticsOrder extends \yii\db\ActiveRecord
      * @param $logistics_sn  物流编号
      * @param $goods_sn  商品编号
      * @param $order_arr 打印checkbox选择id
-     * @param $type 查询类型 1、路线 2、自己 3、挂起 4、改变状态 5、同城 6、完成  8、打印  9、大司机 10、待扫码
+     * @param $type 查询类型 1、路线 2、自己 3、挂起 4、改变状态 5、同城 6、完成   8、打印  9、大司机 10、待扫码 11、已原返
      * 靳健
      * */
     public function getOrderList($params,$type,$order_arr=null,$add_time = null,$where = null){
@@ -726,6 +740,7 @@ class LogisticsOrder extends \yii\db\ActiveRecord
                         'order_state = '.Yii::$app->params['orderStateDelivery'],
                         'abnormal = 2',
                         'logistics_order.driver_member_id = '.Yii::$app->user->id,
+                        'return_logistics_sn = ""',
                         $condition,
                         $searchTime
                 ])
@@ -796,6 +811,35 @@ class LogisticsOrder extends \yii\db\ActiveRecord
                 ->where(['and','logistics_order.logistics_route_id = '.$route_id,'order_state = '.Yii::$app->params['orderStateEmployee'],'abnormal = 2',$condition,$searchTime])
                 ->orderBy('order_state,logistics_order.order_id desc')
                 ->asArray()->all();
+                return $orderList;
+                break;
+            case 11:
+                $time_name = $this->getTimeName($params['time_type']);
+                $searchTime = $this->getSearchTime($add_time,$time_name);
+                $orderList = self::find()->joinWith('routeInfo')->joinWith('orderTime')->joinWith('orderPrintLog')
+                ->where([
+                        'and',
+                        'logistics_order.same_city = 1',
+                        ['or',
+                                'state = 1',
+                                'state = 2'
+                        ],
+                        'freight_state = 2',
+                        'order_state = '.Yii::$app->params['orderStateDelivery'],
+                        'abnormal = 2',
+                        'logistics_order.driver_member_id = '.Yii::$app->user->id,
+                        'return_logistics_sn <> ""',
+                        $condition,
+                        $searchTime
+                ])
+                ->orderBy('order_state,logistics_order.order_id desc');
+                if ($params['print']) {
+                    if($params['print'] == '1'){
+                        $orderList->andFilterWhere(['order_print_log.terminus'=>$params['print']]);
+                    } else if($params['print'] == '2') {
+                        $orderList->andFilterWhere(['or', ['order_print_log.terminus'=>$params['print']], 'order_print_log.terminus is null']);
+                    }
+                }
                 return $orderList;
                 break;
             default:
@@ -942,7 +986,7 @@ class LogisticsOrder extends \yii\db\ActiveRecord
                         'and',
                         'order_state = '.Yii::$app->params['orderStateDelivery'],
                         'abnormal = 2',
-                        ['or',['and','state != 1','state != 2']],
+                        ['or',['and','logistics_order.state != 1','logistics_order.state != 2']],
                         'terminus_id = '.$terminus_id,
                         $condition,
                         $searchTime
@@ -1131,13 +1175,21 @@ class LogisticsOrder extends \yii\db\ActiveRecord
         $condition = '';
         if(!empty($params['logistics_sn'])){
 // $condition['logistics_sn'] = $logistics_sn;
-            $condition = "logistics_sn like '%".$params['logistics_sn']."%'";
+            $condition = "logistics_order.logistics_sn like '%".$params['logistics_sn']."%'";
 
         }
-        if(!empty($params['goods_sn'])){
-// $condition['logistics_order.order_id'] = $this::getOrderId($goods_sn);
-            $condition .= "logistics_order.order_id = '{$this::getOrderId($params['goods_sn'])}'";
+        if(!empty($params['employee_id'])){
+            $condition .= (empty($condition)?'':' and ')." logistics_order.employee_id =".$params['employee_id'];
+        
         }
+        if(!empty($params['order_type'])){
+            $condition .= (empty($condition)?'':' and ')." logistics_order.order_type =".$params['order_type'];
+        
+        }
+//         if(!empty($params['goods_sn'])){
+// // $condition['logistics_order.order_id'] = $this::getOrderId($goods_sn);
+//             $condition .= "logistics_order.logistics_order.order_id = '{$this::getOrderId($params['goods_sn'])}'";
+//         }
         
         
         return $condition;
@@ -1182,7 +1234,10 @@ class LogisticsOrder extends \yii\db\ActiveRecord
                 		order_time.ruck_time > ".$ruck_time."
                 ) AS o ON l.`order_id` = o.`order_id`
                 WHERE
-               `driver_member_id` = ".$driver_id;
+               `driver_member_id` = ".$driver_id." 
+                order by 
+                       convert(l.receiving_name using gbk) ASC
+               ";
         $command = Yii::$app->db->createCommand($sql);
         $data     = $command->queryAll();
 //         $data = $this::find()->joinWith('orderTime')->where([
@@ -1653,7 +1708,7 @@ class LogisticsOrder extends \yii\db\ActiveRecord
      */
     public function orderToWithdrawal(){
         
-        $list = $this->find()->where(['member_id'=>Yii::$app->user->id,'goods_price_state'=>1])->asArray()->all();
+        $list = $this->find()->where(['and','member_id = '.Yii::$app->user->id,['&','goods_price_state',1],['not',['&','goods_price_state',4]]])->asArray()->all();
         try{
             foreach($list as $key => $value){
                 $withdrawalOrder = new WithdrawalOrder();
@@ -1683,7 +1738,7 @@ class LogisticsOrder extends \yii\db\ActiveRecord
      * 用户提现方式改变,修改原订单状态
      */
     public function orderWithdrawalPriceState(){
-        $list = $this->find()->where(['member_id'=>Yii::$app->user->id,'goods_price_state'=>1])->asArray()->all();
+        $list = $this->find()->where(['and','member_id = '.Yii::$app->user->id,['&','goods_price_state',1],['not',['&','goods_price_state',4]]])->asArray()->all();
         try{
             foreach($list as $key => $value){
                 $order = $this::findOne($value['order_id']);
@@ -1802,7 +1857,25 @@ class LogisticsOrder extends \yii\db\ActiveRecord
             case Yii::$app->params['roleTeller']:
             case Yii::$app->params['roleTellerIncomeLeader']:
             case Yii::$app->params['roleTellerIncome']:
-               if($data->order_state == Yii::$app->params['orderStateDriver'])//状态为50
+                if($data->order_state == Yii::$app->params['orderStateEmployee'])//状态为10
+                {
+                    $r1 = $this->_setOrderState_1($data, Yii::$app->params['orderStateDriver'], $role);//修改为50
+                    if(!$r1){
+                        return false;
+                    }
+                    $driver = new Driver();
+                    $driverMember = $driver->getVirtualDriverId();
+                    if(!$driverMember) {
+                        return false;
+                    }
+                    if (empty($data->driver_member_id)) {
+                        $r2 = $this->upOrder(array('driver_member_id'=>$driverMember->member_id), array('order_id'=>$data->order_id));
+                        if(!$r2){
+                            return false;
+                        }
+                    }
+                }
+                if($data->order_state == Yii::$app->params['orderStateDriver'])//状态为50
                 {
                     if(!$this->_setOrderState_1($data, Yii::$app->params['orderStateDelivery'], $role)) {
                         return false;
@@ -2143,35 +2216,51 @@ class LogisticsOrder extends \yii\db\ActiveRecord
 	}
 	//开单统计
 	public function getEmployeeOrderNum($dataProvider){
-	    $order_num = $dataProvider->query->count();
+	    $query = serialize($dataProvider);
+	    $query = unserialize($query);
+	    $order_num = $query->query->count('*', Yii::$app->db_slave);
 	    return $order_num;
 	}
 	public function getEmployeeGoodsNum($dataProvider){
-	    $goods_num = $dataProvider->query->sum('goods_num');
+	    $query = serialize($dataProvider);
+	    $query = unserialize($query);
+	    $goods_num = $query->query->sum('goods_num', Yii::$app->db_slave);
 	    return $goods_num;
 	}
 	public function getEmployeePrice($dataProvider){
-	     $price = $dataProvider->query->sum('goods_price');
+	    $query = serialize($dataProvider);
+	    $query = unserialize($query);
+	    $price = $query->query->sum('goods_price', Yii::$app->db_slave);
 	     return $price;
 	}
 	public function getEmployeePriceCount($dataProvider){
-	    $price_count = $dataProvider->query->andWhere(['>','goods_price',0])->count();
+	    $query = serialize($dataProvider);
+	    $query = unserialize($query);
+	    $price_count = $query->query->andWhere(['>','goods_price',0])->count('*', Yii::$app->db_slave);
 	    return $price_count;
 	}
 	public function getEmployeeSameCityOrder($dataProvider){
-	    $same_city_order = $dataProvider->query->andWhere(['logistics_order.same_city'=>1])->count();
+	    $query = serialize($dataProvider);
+	    $query = unserialize($query);
+	    $same_city_order = $query->query->andWhere(['logistics_order.same_city'=>1])->count('*', Yii::$app->db_slave);
 	    return $same_city_order;
 	}
 	public function getEmployeeSameCityGoods($dataProvider){
-	    $same_city_goods = $dataProvider->query->andWhere(['logistics_order.same_city'=>1])->sum('goods_num');
+	    $query = serialize($dataProvider);
+	    $query = unserialize($query);
+	    $same_city_goods = $query->query->andWhere(['logistics_order.same_city'=>1])->sum('goods_num', Yii::$app->db_slave);
 	    return $same_city_goods;
 	}
 	public function getEmployeeSameCityPrice($dataProvider){
-	    $same_city_price = $dataProvider->query->andWhere(['logistics_order.same_city' => 1])->sum('goods_price');
+	    $query = serialize($dataProvider);
+	    $query = unserialize($query);
+	    $same_city_price = $query->query->andWhere(['logistics_order.same_city' => 1])->sum('goods_price', Yii::$app->db_slave);
 	    return $same_city_price;
 	}
 	public function getEmployeeSameCityPriceCount($dataProvider){
-	    $same_city_price_count = $dataProvider->query->andWhere(['and','logistics_order.same_city = 1',['>','goods_price',0]])->count();
+	    $query = serialize($dataProvider);
+	    $query = unserialize($query);
+	    $same_city_price_count = $query->query->andWhere(['and','logistics_order.same_city = 1',['>','goods_price',0]])->count('*', Yii::$app->db_slave);
 	    return $same_city_price_count;
 	}
 	
@@ -2247,6 +2336,43 @@ class LogisticsOrder extends \yii\db\ActiveRecord
 	   return $_phone;
 	}
 
+	/**
+	 * 获取订单与商品信息
+	 * @param unknown $orderSn
+	 * @return boolean|\common\models\LogisticsCar
+	 */
+	public function getOrderInfo($orderSn)
+	{
+	    $orderDatas = LogisticsOrder::find()->select('order_id,logistics_sn,order_type,goods_price,member_name,member_phone, receiving_name,receiving_phone,freight,logistics_route_id,receiving_name_area,add_time')
+	    ->where(['logistics_sn'=>$orderSn])->asArray()->one();
+	    if(empty($orderDatas))
+	    {
+	        return false;
+	    }
+	    $goodsDatas = Goods::find()->select('goods_id,goods_sn,car_id,goods_state')->where(['order_id'=>$orderDatas['order_id']])->asArray()->all();
+	    if(empty($goodsDatas))
+	    {
+	        return false;
+	    }
+	    $datas['order'] = $orderDatas;
+	    $LogisticsRoute = LogisticsRoute::findOne($orderDatas['logistics_route_id']);
+	    $datas['order']['logistics_route_name'] = $LogisticsRoute->logistics_route_name;
+	    $datas['order']['order_type'] = Yii::$app->params['order_type'][$orderDatas['order_type']];
+	    foreach ($goodsDatas as $k => $v){
+	        $arr = array();
+	        $arr = $v;
+	        $arr['goods_state'] = $v['goods_state']>10?'已处理':'处理';
+	        $arr['car'] = '';
+	        if($v['car_id']>0)
+	        {
+	            $car = LogisticsCar::findOne($v['car_id']);
+	            $arr['car'] = $car['car_number'];
+	        }
+	        $datas['goods'][] = $arr;
+	    }
+	    return $datas;
+	}
+	
     /**
      * @Author:Fenghuan
      * @param $field
@@ -2269,6 +2395,80 @@ class LogisticsOrder extends \yii\db\ActiveRecord
 
         return $rate;
     }
+
+    /**
+     * 根据driver_member_id获取列表
+     * @Author:Fenghuan
+     * @param $condition
+     * @param $fields
+     * @param $offset
+     * @param $limit
+     * @param $column
+     * @return array|\yii\db\ActiveRecord[]
+     */
+    public function getOrders($condition, $fields, $offset, $limit, $column)
+    {
+                                                                                                                        //data =  self::find()->select($fields)->where($condition)->limit($limit)->offset($offset)->orderBy($column)->asArray()->createCommand()->getRawSql();var_dump($data);die;
+        return self::find()->select($fields)->where($condition)->limit($limit)->offset($offset)->orderBy($column)->asArray()->all();
+    }
+
+    /**
+     * 订单连接商品
+     * @Author:Fenghuan
+     * @param $fields
+     * @param $condition
+     * @return array|\yii\db\ActiveRecord[]
+     */
+    public function getRouteArr($fields, $condition)
+    {
+                                                                                                                       //$data = self::find()->select($fields)->leftJoin('goods', 'logistics_order.order_id = goods.order_id')->where($condition)->asArray()->createCommand()->getRawSql();var_dump($data);die;
+        $data = self::find()
+                ->select($fields)
+                ->leftJoin('goods', 'logistics_order.order_id = goods.order_id')
+                ->where($condition)
+                ->asArray()
+                ->all()
+        ;
+        return $data;
+
+    }
+
+    /**
+     * 按条件查订单数量
+     * @Author:Fenghuan
+     * @param $fields
+     * @param $condition
+     * @return int|string
+     */
+    public function getCountOrders($fields, $condition)
+    {
+        return self::find()->select($fields)->where($condition)->count();
+    }
+
+    /**
+     * Get one model
+     * @Author:Fenghuan
+     * @param $condition
+     * @return static
+     */
+    public function findOneModel($condition){
+        return self::findOne($condition);
+    }
+    
+    /**
+     * 靳健异常恢复
+     * @param unknown $order_id  订单id
+     * @param unknown $order_state  恢复状态
+     */
+    public function recoverOrder($order_id,$order_state){
+        $modelOrder = $this::findOne($order_id);
+        $modelOrder->scenario = 'search';
+        $modelOrder->order_state = $order_state;
+        $modelOrder->abnormal = 2;
+        return $modelOrder->save();
+    }
+
+
 
 
     /*0.0
@@ -2317,7 +2517,7 @@ class LogisticsOrder extends \yii\db\ActiveRecord
     }
 
     /*0.0
-    *订单类型  OrderType
+    *订单类型  OrderTypef
    */
     public static function getOrderTypeList($OrderType)
     {
@@ -2327,6 +2527,18 @@ class LogisticsOrder extends \yii\db\ActiveRecord
                 return '线上';
             case '3':
                 return '瑞胜';
+        }
+    }
+    
+    public static function getOrderType($order_type){
+        switch ($order_type)
+        {
+            case '1':
+                return '西部';
+            case '3':
+                return '瑞胜';
+            case '3':
+                return '塔湾';
         }
     }
 
@@ -2396,8 +2608,38 @@ class LogisticsOrder extends \yii\db\ActiveRecord
             -> where(['logistics_order.order_id'=>$id])
             ->asArray()
             -> one();
+        header("Content-Type:text/html;charset=utf-8");
 //        var_dump($result);exit();
         return $result;
+    }
+
+    /*0.0
+    * 多表联查，得到扫码时间
+   */
+    public static function getThenTime($id)
+    {
+        $query = self::find();
+        $result = $query -> select(['goods.update_time'])
+            -> leftJoin('goods','logistics_order.order_id = goods.order_id')
+            -> where(['logistics_order.order_id'=>$id])
+            ->asArray()
+            -> all();
+//        var_dump($result);exit();
+        return $result;
+    }
+    
+    public function getReturnType($order_sn){
+        $orderReturn = new LogisticsReturnOrder();
+        $returnModel = $orderReturn::findOne(['ship_logistics_sn'=>$order_sn]);
+        if(!empty($returnModel)){
+            if($returnModel->return_type==1){
+                return '(已原返)';
+            }else if($returnModel->return_type==3){
+                return '(追)';
+            }
+        }else{
+            return '';
+        }
     }
 
 

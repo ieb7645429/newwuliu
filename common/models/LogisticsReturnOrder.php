@@ -4,8 +4,9 @@ namespace common\models;
 use common\models\LogisticsRoute;
 use Yii;
 use yii\base\Object;
-use backend\models\OrderAdvance;
 use backend\models\ReturnOrderRemark;
+use backend\models\ReturnOrderTellerRemark;
+use backend\models\TellerReturnLog;
 
 /**
  * This is the model class for table "logistics_return_order".
@@ -50,7 +51,7 @@ class LogisticsReturnOrder extends \yii\db\ActiveRecord
     public function scenarios()
     {
         $scenarios = parent::scenarios();
-        $scenarios[self::SCENARIO_CREATE] = ['freight', 'goods_price', 'make_from_price', 'collection_poundage_two','goods_num', 'order_state', 'state', 'abnormal', 'collection', 'order_type', 'return_type', 'return_all', 'add_time', 'member_id', 'member_cityid', 'receiving_provinceid', 'receiving_cityid',  'terminus_id', 'shipping_type','add_time', 'member_phone', 'member_name', 'member_cityid', 'goods_num', 'receiving_phone', 'receiving_name', 'make_from_price', 'freight','logistics_sn', 'ship_logistics_sn', 'goods_sn', 'order_sn', 'member_name', 'member_phone', 'receiving_name', 'receiving_phone'];
+        $scenarios[self::SCENARIO_CREATE] = ['freight', 'goods_price', 'make_from_price', 'collection_poundage_two','goods_num', 'order_state', 'state', 'abnormal', 'collection', 'order_type', 'return_type', 'return_all', 'add_time', 'member_id', 'member_cityid', 'receiving_provinceid', 'receiving_cityid',  'terminus_id', 'shipping_type','add_time', 'member_phone', 'member_name', 'member_cityid', 'goods_num', 'receiving_phone', 'receiving_name', 'receiving_name_area', 'make_from_price', 'freight','logistics_sn', 'ship_logistics_sn', 'goods_sn', 'order_sn', 'member_name', 'member_phone', 'receiving_name', 'receiving_phone'];
         $scenarios[self::SCENARIO_CREATE_2] = ['member_phone','member_name','member_cityid','goods_num','goods_price', 'order_type','receiving_phone','receiving_name','receiving_name_area','shipping_type','make_from_price','freight'];
         $scenarios[self::SCENARIO_SEARCH] = [];
         return $scenarios;
@@ -70,8 +71,8 @@ class LogisticsReturnOrder extends \yii\db\ActiveRecord
     {
         return [
             [['freight', 'goods_price', 'make_from_price', 'collection_poundage_two'], 'number'],
-            [['goods_num', 'order_state', 'state', 'abnormal', 'collection', 'order_type', 'return_type', 'return_all', 'add_time', 'member_id', 'member_cityid', 'receiving_provinceid', 'receiving_cityid', 'receiving_areaid', 'terminus_id', 'shipping_type'], 'integer'],
-            [['add_time', 'member_phone', 'member_name', 'member_cityid', 'goods_num', 'receiving_phone', 'receiving_name', 'receiving_areaid', 'receiving_name_area', 'make_from_price', 'freight'], 'required'],
+            [['goods_num', 'order_state', 'state', 'abnormal', 'collection', 'return_type', 'return_all', 'add_time', 'member_id', 'member_cityid', 'receiving_provinceid', 'receiving_cityid', 'receiving_areaid', 'terminus_id', 'shipping_type'], 'integer'],
+            [['add_time', 'member_phone', 'member_name', 'member_cityid', 'goods_num', 'receiving_phone', 'receiving_name', 'receiving_areaid', 'receiving_name_area', 'make_from_price', 'freight', 'order_type'], 'required'],
             [['logistics_sn', 'ship_logistics_sn', 'goods_sn', 'order_sn', 'member_name', 'member_phone', 'receiving_name', 'receiving_phone', 'receiving_name_area'], 'string', 'max' => 255],
         ];
     }
@@ -363,6 +364,55 @@ class LogisticsReturnOrder extends \yii\db\ActiveRecord
     			}
     			return false;
     			break;
+    			// 财务修改订单状态
+		    case Yii::$app->params['roleTeller']:
+		    case Yii::$app->params['roleTellerIncomeLeader']:
+		    case Yii::$app->params['roleTellerIncome']:
+		        if($data->order_state == Yii::$app->params['returnOrderStateEmployee'])//10
+		        {
+		            $r1 = $this->_setOrderState_1($data, Yii::$app->params['returnOrderStateDivide'], $role);//20
+// 		            $r2= $this->_upStorageId($data);
+		            if(!$r1)
+		            {
+		                return false;
+		            }
+		        }
+		        if($data->order_state == Yii::$app->params['returnOrderStateDivide'])//20
+		        {
+		            $r1 = $this->_setOrderState_1($data, Yii::$app->params['returnOrderStateFerry'], $role);//30
+// 		            $r2= $this->_upStorageId($data);
+		            if(!$r1)
+		            {
+		                return false;
+		            }
+		        }
+		        if($data->order_state == Yii::$app->params['returnOrderStateFerry'])//30
+		        {
+		            $r1 = $this->_setOrderState_1($data, Yii::$app->params['returnOrderStateDriver'], $role);//50
+// 		            $r2= $this->_upStorageId($data);
+		            if(!$r1)
+		            {
+		                return false;
+		            }
+		        }
+		        if($data->order_state == Yii::$app->params['returnOrderStateDriver'])//50
+		        {
+		            $r1 = $this->_setOrderState_1($data, Yii::$app->params['returnOrderStateDelivery'], $role);//70
+// 		            $r2 = $this->_upReturnManageId($data);
+		            if($data->state == 2 && ($data->return_type == 1 || $data->shipping_type == 1))
+		            {
+		                $res3 = $this->_collection($data);
+		                if($res3 == false)
+		                {
+		                    return false;
+		                }
+		            }
+		            if($r1)
+		            {
+		                return true;
+		            }
+		        }
+		        return false;
     		default: return false;
     	}
     }
@@ -435,13 +485,20 @@ class LogisticsReturnOrder extends \yii\db\ActiveRecord
      */
     public function tagOrderPrint($order_id){
         $area = new Area();
+        $order = new LogisticsOrder();
         $data = $this::find()->joinWith('goodsInfo')->where(['logistics_return_order.order_id'=>$order_id])->asArray()->all();
         $data[0]['province'] = $area::findOne($data[0]['receiving_provinceid'])->area_name;
         $data[0]['city'] = $area::findOne($data[0]['receiving_cityid'])->area_name;
 // 		$data[0]['district'] = $area::findOne($data[0]['receiving_areaid'])->area_name;
 		$data[0]['from_city'] = $area::findOne($data[0]['member_cityid'])->area_name;
+		$data[0]['employee_name'] = User::findOne($data[0]['employee_id'])->username;
+		$data[0]['remark'] = empty(ReturnOrderRemark::findOne($order_id))?'':ReturnOrderRemark::findOne($order_id)->edit_content;
+		$data[0]['all_amount'] = $order->getGoodsPrice($data,'return')[0]['all_amount'];
         return $data;
     }
+
+
+
     /**
      * 联合查询
      * 靳健
@@ -458,6 +515,21 @@ class LogisticsReturnOrder extends \yii\db\ActiveRecord
     public function getAdvance()
     {
         return $this->hasOne(OrderAdvance::className(), ['logistics_sn' => 'ship_logistics_sn']);
+    }
+    
+    public function getLogisticsOrder()
+    {
+        return $this->hasOne(LogisticsOrder::className(), ['logistics_sn' => 'ship_logistics_sn']);
+    }
+    
+    public function getLogisticsOrderSn() {
+        if($this->logisticsOrder) {
+            if(!empty($this->logisticsOrder->order_sn)&&!is_numeric($this->logisticsOrder->order_sn)){
+                return unserialize($this->logisticsOrder->order_sn);
+            }
+            return $this->logisticsOrder->order_sn;
+        } 
+        return '';
     }
     
     public function getAdvanceShow($ship_logistics_sn)
@@ -483,7 +555,10 @@ class LogisticsReturnOrder extends \yii\db\ActiveRecord
     public function getSenderName(){
         return $this->hasOne(ReturnOrderRemark::className(), ['order_id' => 'order_id']);
     }
-    
+
+    public function getRemarkContent($orderId) {
+        return ReturnOrderTellerRemark::getLastContent($orderId ? $orderId : $this->order_id);
+    }
 
     /**
      * 联合查询
@@ -735,6 +810,8 @@ class LogisticsReturnOrder extends \yii\db\ActiveRecord
                 return '返货';
             case '2':
                 return '退货';
+            case '3':
+                return '追回';
         }
     }
     /**
@@ -787,7 +864,7 @@ class LogisticsReturnOrder extends \yii\db\ActiveRecord
         $model->member_phone = $data->receiving_phone;
         $model->member_name = $data->receiving_name;
         $model->member_cityid = $data->receiving_cityid;
-        //$model->goods_num = $data->goods_num;
+        $model->goods_num = $data->goods_num;
         $model->goods_price = $data->goods_price;
         $model->receiving_phone = $data->member_phone;
         $model->receiving_name = $data->member_name;
@@ -797,7 +874,41 @@ class LogisticsReturnOrder extends \yii\db\ActiveRecord
         $model->receiving_name_area = $memberInfo->member_areainfo;
         $model->ship_logistics_sn = $data->logistics_sn;
         $model->shipping_type = $data->shipping_type;
+        $model->collection = $data->collection;
 //         $model->make_from_price = $data->make_from_price;
+        $model->order_type = $data->order_type;
+        $model->make_from_price = 0;
+        $model->freight = $data->freight;
+        $model->collection_poundage_two = $data->collection_poundage_two;
+        return $model;
+    }
+    /**
+     * 追回信息
+     * 靳健
+     * @param $order_id
+     * @param $model
+     */
+    public function getReplevyCreate($order_id,$model){
+        $data = LogisticsOrder::findOne($order_id);
+        if(empty($data)){
+            return $model;
+        }
+        $memberInfo = User::findOne($data->member_id);
+        $model->member_phone = $data->receiving_phone;
+        $model->member_name = $data->receiving_name;
+        $model->member_cityid = $data->receiving_cityid;
+        $model->goods_num = $data->goods_num;
+        $model->goods_price = $data->goods_price;
+        $model->receiving_phone = $data->member_phone;
+        $model->receiving_name = $data->member_name;
+        $model->receiving_provinceid = $memberInfo->member_provinceid;
+        $model->receiving_cityid = $data->member_cityid;
+        //$model->receiving_areaid = $memberInfo->member_areaid;
+        $model->receiving_name_area = $memberInfo->member_areainfo;
+        $model->ship_logistics_sn = $data->logistics_sn;
+        $model->shipping_type = $data->shipping_type;
+        $model->collection = $data->collection;
+        //         $model->make_from_price = $data->make_from_price;
         $model->order_type = $data->order_type;
         $model->make_from_price = 0;
         $model->freight = $data->freight;
@@ -849,7 +960,7 @@ class LogisticsReturnOrder extends \yii\db\ActiveRecord
             $return[] = '未收款';
         }
         if ($goodsPriceState & 4) {
-            $return[] = '已结款';
+            $return[] = '已返款';
         }
         return implode("/", $return);
     }
@@ -982,6 +1093,81 @@ class LogisticsReturnOrder extends \yii\db\ActiveRecord
         }
         return true;
     }
+    
+    public function tellerIncomeConfirm($orderId) {
+        $modelReturnOrderTime = new ReturnOrderTime();
+        $data = self::findOne($orderId);
+        
+        if($data->goods_price_state & 1)
+        {
+            return array(
+                'order_id'=>$orderId,
+                'goods_price_state_name' => $this->getGoodsPriceStateName($data->goods_price_state),
+            );
+        }
+        
+        // 修改订单状态
+        if(!$this->setReturnOrderState($data)) {
+            return false;
+        }
+        
+        if (! $modelReturnOrderTime->orderTimeswitch('price', $data)) {
+            return false;
+        }
+        
+        $tellerLog = new TellerReturnLog();
+        $params['order_id'] = $orderId;
+        $params['type'] = 1;
+        if(!$tellerLog->addLog($params)) {
+            return false;
+        }
+        
+        $data->goods_price_state = 1;
+        $res = $data->save();
+        if(!$res){
+            return false;
+        }
+        $arr = array(
+            'order_id'=>$orderId,
+            'goods_price_state_name' => $this->getGoodsPriceStateName($data->goods_price_state),
+        );
+        return $arr;
+    }
+    
+    public function tellerPayConfirm($orderId) {
+        $modelReturnOrderTime = new ReturnOrderTime();
+        $data = self::findOne($orderId);
+        
+        if($data->goods_price_state & 4)
+        {
+            return array(
+                'order_id'=>$orderId,
+                'goods_price_state_name' => $this->getGoodsPriceStateName($data->goods_price_state),
+            );
+        }
+        
+        if (! $modelReturnOrderTime->orderTimeswitch('pay_price_time', $data)) {
+            return false;
+        }
+        
+        $tellerLog = new TellerReturnLog();
+        $params['order_id'] = $orderId;
+        $params['type'] = 2;
+        if(!$tellerLog->addLog($params)) {
+            return false;
+        }
+        
+        $data->goods_price_state = $data->goods_price_state | 4;
+        $res = $data->save();
+        if(!$res){
+            return false;
+        }
+        $arr = array(
+            'order_id'=>$orderId,
+            'goods_price_state_name' => $this->getGoodsPriceStateName($data->goods_price_state),
+        );
+        return $arr;
+    }
 
     /**
      * 改变退货订单状态
@@ -1029,7 +1215,7 @@ class LogisticsReturnOrder extends \yii\db\ActiveRecord
      * @param unknown $orderState
      */
     private function _upReturnOrderState($data,$orderState){
-    	$data->scenario='create';
+    	$data->scenario='search';
         $data->order_state = $orderState;
         return $data->save();
     }

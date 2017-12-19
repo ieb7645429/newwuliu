@@ -21,6 +21,9 @@ $this->params['leftmenus'] = $menus;
 	<div class="user-form">
 
     <?php $form = ActiveForm::begin(); ?>
+    <?php if(!empty($bank)):?>
+    	<?= $form->field($bank, 'bank_info_id',['labelOptions' => ['label' => ' ']])->hiddenInput(['style'=>'height:1px','value' => $bank->bank_info_id]) ?>
+    <?php endif;?>
 
     <?= $form->field($model, 'username')->textInput(['style'=>'width:50%']) ?>
     <?= $form->field($model, 'user_truename')->textInput(['style'=>'width:50%'])->label('真实姓名') ?>
@@ -28,7 +31,7 @@ $this->params['leftmenus'] = $menus;
     <?php if(!empty($bank)):?>
     	<?= $form->field($bank, 'bank_info_card_no',['labelOptions' => ['label' => '银行卡号']])->textInput(['maxlength' => true,'style'=>'width:50%','value' => $bank->bank_info_card_no]) ?>
     	<?= $form->field($bank, 'bank_info_account_name',['labelOptions' => ['label' => '开户名']])->textInput(['maxlength' => true,'style'=>'width:50%','value' => $bank->bank_info_account_name]) ?>
-    	<?= $form->field($bank, 'bank_info_bank_name',['labelOptions' => ['label' => '开户行名称']])->textInput(['maxlength' => true,'style'=>'width:50%','value' => $bank->bank_info_bank_name]) ?>
+    	<?= $form->field($bank, 'bank_info_bank_name',['labelOptions' => ['label' => '开户行名称']])->dropDownList(Yii::$app->params['bankname'],['style'=>'width:50%','options'=>[$bank->bank_info_bank_name=>['Selected'=>true]]]) ?>
     	<?= $form->field($bank, 'bank_info_bank_address',['labelOptions' => ['label' => '开户行地址']])->textInput(['maxlength' => true,'style'=>'width:50%','value' => $bank->bank_info_bank_address]) ?>
     <?php endif;?>
     <div>

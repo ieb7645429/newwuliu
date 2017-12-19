@@ -50,6 +50,7 @@ class DriverManagerController extends \yii\web\Controller
         //分页
         $pages = new Pagination(['totalCount' =>count($orderList), 'pageSize' => Yii::$app->params['page_size']]);
         $model = array_slice($orderList,$pages->offset,$pages->limit);
+        
         return $this->render('index',
                 [
                         'goods'=>$goods,
@@ -61,9 +62,13 @@ class DriverManagerController extends \yii\web\Controller
                         'add_time' => $add_time,
                         'driver_id'=>$driver_id,
                         'menus' => $this->_getMenus(),
+                        'count' => $this->_CookieClear($orderList,'arr'),
+                        'order_arr' => $this->_GetOrderArr(),
+                        'rule' => Yii::$app->request->queryParams['r'],
                 ]
                 );
     }
+
     //待封车
     public function actionIndexAnother()
     {
@@ -102,6 +107,9 @@ class DriverManagerController extends \yii\web\Controller
                     'add_time' => $add_time,
                     'driver_id'=>$driver_id,
                     'menus' => $this->_getMenus(),
+                    'count' => $this->_CookieClear($orderList,'arr'),
+                    'order_arr' => $this->_GetOrderArr(),
+                    'rule' => Yii::$app->request->queryParams['r'],
                 ] 
                );
     }
@@ -139,6 +147,9 @@ class DriverManagerController extends \yii\web\Controller
                         'pages' => $pages,
                         'add_time' => $add_time,
                         'menus' => $this->_getMenus(),
+                        'count' => $this->_CookieClear(null,'none'),
+                        'order_arr' => $this->_GetOrderArr(),
+                        'rule' => Yii::$app->request->queryParams['r'],
                 ]
                 );
     }
@@ -186,6 +197,9 @@ class DriverManagerController extends \yii\web\Controller
                         'menus' => $this->_getMenus(),
                         'is_print'=>$driverConfig->getSmallPrintStatus(),
                         'driver_id'=>$driver_id,
+                        'count' => $this->_CookieClear($LogisticsOrder->getDriverManagerList($params,$type,null,$add_time,$where),'obj'),
+                        'order_arr' => $this->_GetOrderArr(),
+                        'rule' => Yii::$app->request->queryParams['r'],
                 ]
                 );
         
@@ -232,7 +246,9 @@ class DriverManagerController extends \yii\web\Controller
                         'add_time' => $add_time,
                         'order_sn_id' => $order_sn_id,
                         'menus' => $this->_getMenus(),
-                        'count' => $count,
+                        'count' => $this->_CookieClear(null,'none'),
+                        'order_arr' => $this->_GetOrderArr(),
+                        'rule' => Yii::$app->request->queryParams['r'],
                 ]
                 );
     }
@@ -274,6 +290,7 @@ class DriverManagerController extends \yii\web\Controller
                         'pages' => $pages,
                         'add_time' => $add_time,
                         'menus' => $this->_getMenus(),
+                        'rule' => Yii::$app->request->queryParams['r'],
                 ]
                 );
     }
@@ -317,8 +334,27 @@ class DriverManagerController extends \yii\web\Controller
                         'add_time' => $add_time,
                         'route_id' => Yii::$app->request->get('LogisticsRoute')['logistics_route_id'],
                         'menus' => $this->_getMenus(),
+                        'rule' => Yii::$app->request->queryParams['r'],
                 ]
                 );
+    }
+    /**
+     * 订单异常恢复
+     */
+    public function actionRecoverEdit(){
+        $order = new LogisticsOrder();
+        if($order->recoverOrder(Yii::$app->request->post('order_id'),10)){
+            $result = [
+                    'error'=>200,
+                    'message'=>'恢复成功',
+            ];
+        }else{
+            $result = [
+                    'error'=>400,
+                    'message'=>'恢复失败',
+            ];
+        }
+        return json_encode($result);
     }
     
     /**
@@ -350,6 +386,11 @@ class DriverManagerController extends \yii\web\Controller
     public function actionAjaxDriverChange(){
         $driverConfig = new DriverConfig();
         if($driverConfig->editDriverManagerStatus(Yii::$app->request->post('driver_id'))){
+            $cookies = Yii::$app->request->cookies;//清楚cookie
+            if(isset($cookies['checkbox'])){
+                $checkbox = $cookies->get('checkbox');
+                Yii::$app->response->cookies->remove($checkbox);
+            }
             $result = ['code'=>200,'message'=>'司机切换成功'];
         }else{
             $result = ['code'=>400,'message'=>'司机切换失败'];
@@ -530,6 +571,53 @@ class DriverManagerController extends \yii\web\Controller
             $goodsList[$key]['carInfo'] = $carInfo::findOne(['logistics_car_id'=>$value['car_id']]);
         }
         return $goodsList;
+    }
+    /**
+     * 清除cookie
+     * @param unknown $data
+     * @param string $type  arr数组  obj对象 none默认不选中
+     */
+    private function _CookieClear($data,$type = 'obj'){
+        $cookies = Yii::$app->request->cookies;
+        $count = 0;
+        if(empty(Yii::$app->request->queryParams['page'])){
+                //删除cookie
+                if(isset($cookies['checkbox'])){
+                    $checkbox = $cookies->get('checkbox');
+                    Yii::$app->response->cookies->remove($checkbox);
+                }
+                //默认不选中
+                if($type=='none'){
+                    return $count;
+                }
+                //默认cookie全部选中
+                if($type=='arr'){
+                    $order_arr = ArrayHelper::getColumn($data,'order_id');
+                }else if($type=='obj'){
+                    $order_arr = ArrayHelper::getColumn($data->asArray()->all(),'order_id');
+                }
+                $order_str = implode('-',$order_arr);
+                //添加新cookie
+                Yii::$app->response->cookies->add(new \yii\web\Cookie([
+                        'name' => 'checkbox',
+                        'value' => $order_str,
+                    ])
+                );
+                $count = count($order_arr);
+        }else{
+            if(isset($cookies['checkbox'])){
+                $count = count(explode('-',$cookies->get('checkbox')));
+            }
+        }
+        return  $count;
+    }
+    //获取cookie
+    private function _GetOrderArr(){
+        $cookies = Yii::$app->request->cookies;
+        if(isset($cookies['checkbox'])){
+            return explode('-',$cookies->get('checkbox'));
+        }
+        return array();
     }
     
 }

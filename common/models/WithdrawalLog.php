@@ -94,6 +94,7 @@ class WithdrawalLog extends \yii\db\ActiveRecord
             case 1 : return '收入'; break;
             case 2 : return '支出'; break;
             case 3 : return '转订单'; break;
+            case 4 : return '追回'; break;
             default : return '未知'; break;
         }
     }

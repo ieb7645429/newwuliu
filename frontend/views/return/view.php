@@ -21,7 +21,7 @@ $this->params['leftmenus'] = $menus;
 <input type="hidden" id="tag_print" value="<?=$print?>">
 <input type="hidden" id="tag_order_id" value="<?=$model->order_id?>">
 <div class="logistics-return-order-view">
-
+<input type="hidden" id="return_type" value="<?=$model->return_type?>">
     <h1><?= Html::encode($this->title) ?></h1>
 
     <p>
@@ -102,7 +102,7 @@ $this->params['leftmenus'] = $menus;
 //                     return Area::getAreaNameById($model->receiving_areaid);
 //                 },
 //             ],
-//             'receiving_name_area',
+            'receiving_name_area',
 //             'terminus_id',
 //             'logistics_route_id',
             [

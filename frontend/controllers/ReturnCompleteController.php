@@ -3,6 +3,7 @@
 namespace frontend\controllers;
 
 use Yii;
+use yii\helpers\ArrayHelper;
 use yii\web\Controller;
 use common\models\LogisticsReturnOrder;
 use common\models\LogisticsReturnOrderSearch;
@@ -47,6 +48,8 @@ class ReturnCompleteController extends \yii\web\Controller
                         'pages' => $pages,
                         'menus' => $this->_getMenus(),
                         'identity' => $identity,
+                        'check_count' => $this->_CookieClear($return->returnList($params,$where),'obj'),
+                        'order_arr' => $this->_GetOrderArr(),
                 ]
                 );
     }
@@ -104,6 +107,8 @@ class ReturnCompleteController extends \yii\web\Controller
                         'pages' => $pages,
                         'menus' => $this->_getMenus(),
                         'identity' => $identity,
+                        'check_count' => $this->_CookieClear(null,'none'),
+                        'order_arr' => $this->_GetOrderArr(),
                 ]
                 );
     }
@@ -138,7 +143,8 @@ class ReturnCompleteController extends \yii\web\Controller
         $order = new LogisticsOrder();
         $returnGoods = new ReturnGoods();
         $return = new LogisticsReturnOrder();
-        $order_arr = Yii::$app->request->post('order_arr');
+        $cookies = Yii::$app->request->cookies->get('checkbox');
+        $order_arr = explode('-',$cookies);
         $where = ['in','logistics_return_order.order_id',$order_arr];
         $orderList = $return->returnList(array(),$where)->asArray()->all();
         $orderList = $order->getGoodsPrice($orderList,'return');
@@ -304,6 +310,53 @@ class ReturnCompleteController extends \yii\web\Controller
         $goods = new ReturnGoods();
         $goodsList = $goods->find()->where(['order_id'=>$order_id])->asArray()->all();
         return $goodsList;
+    }
+    /**
+     * 清除cookie
+     * @param unknown $data
+     * @param string $type  arr数组  obj对象 none默认不选中
+     */
+    private function _CookieClear($data,$type = 'obj'){
+        $cookies = Yii::$app->request->cookies;
+        $count = 0;
+        if(empty(Yii::$app->request->queryParams['page'])){
+                //删除cookie
+                if(isset($cookies['checkbox'])){
+                    $checkbox = $cookies->get('checkbox');
+                    Yii::$app->response->cookies->remove($checkbox);
+                }
+                //默认不选中
+                if($type=='none'){
+                    return $count;
+                }
+                //默认cookie全部选中
+                if($type=='arr'){
+                    $order_arr = ArrayHelper::getColumn($data,'order_id');
+                }else if($type=='obj'){
+                    $order_arr = ArrayHelper::getColumn($data->asArray()->all(),'order_id');
+                }
+                $order_str = implode('-',$order_arr);
+                //添加新cookie
+                Yii::$app->response->cookies->add(new \yii\web\Cookie([
+                        'name' => 'checkbox',
+                        'value' => $order_str,
+                    ])
+                );
+                $count = count($order_arr);
+        }else{
+            if(isset($cookies['checkbox'])){
+                $count = count(explode('-',$cookies->get('checkbox')));
+            }
+        }
+        return  $count;
+    }
+    //获取cookie
+    private function _GetOrderArr(){
+        $cookies = Yii::$app->request->cookies;
+        if(isset($cookies['checkbox'])){
+            return explode('-',$cookies->get('checkbox'));
+        }
+        return array();
     }
 
 }

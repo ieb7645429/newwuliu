@@ -46,7 +46,7 @@ $this->params['leftmenus'] = $menus;
 	<?php //echo '商品数量:'.$goods_num.'件  今日订单:'.($orderNum['1']['orderNum']+$orderNum['2']['orderNum']).'  今日同城订单:'.$orderNum['1']['orderNum'].'  代收款订单数 :'.$allPrice['count'].'件   代收款金额:'.$allPrice['price'];?>
     <?php ActiveForm::end(); ?>
     <?php if(empty($indexOver))$template = '{view} {update} {delete} {return}';else$template = '{view} {return}';?>
-    <table class="table">
+   <!--  统计注释  <table class="table">
     <tr>
     	<th>票数</th>
     	<th>件数</th>
@@ -68,6 +68,7 @@ $this->params['leftmenus'] = $menus;
     	<td><?=empty($count['same_city_price'])?0:$count['same_city_price']?></td>
     </tr>
     </table>
+     -->
     <?= GridView::widget([
         'dataProvider' => $dataProvider,
         'filterModel' => $searchModel,
@@ -78,10 +79,7 @@ $this->params['leftmenus'] = $menus;
             [
                 'attribute' => 'logistics_sn',
                 'value' => function($model){
-                    if(!empty($model->return_logistics_sn)){
-                        return $model->logistics_sn."(已原返)";
-                    }
-                    return $model->logistics_sn;
+                    return $model->logistics_sn.$model->getReturnType($model->logistics_sn);
                 }
             ],
             [
@@ -97,8 +95,8 @@ $this->params['leftmenus'] = $menus;
             ],
             [
                 'label' => '会员号',
-                'attribute' => 'userName',
-                'value' => 'userName.username',
+                'attribute' => 'userUsername',
+                'value' => 'userUsername',
             ],
             'freight',
             'goods_price',
@@ -149,8 +147,8 @@ $this->params['leftmenus'] = $menus;
 //             'member_cityid',
             [
                 'label' => '发货人市',
-                'attribute' => 'memberCityName',
-                'value' => 'memberCityName.area_name',
+                'attribute' => 'breaAreaname',
+                'value' => 'breaAreaname',
                 'contentOptions' => [
                         'width'=>'80'
                 ],
@@ -161,8 +159,8 @@ $this->params['leftmenus'] = $menus;
 //             'receiving_name_area',
             [
                 'label' => '收货人市',
-                'attribute' => 'receivingCityName',
-                'value' => 'receivingCityName.area_name',
+                'attribute' => 'areaAreaname',
+                'value' => 'areaAreaname',
             		'contentOptions' => [
             				'width'=>'80'
             		],
@@ -170,17 +168,17 @@ $this->params['leftmenus'] = $menus;
             [
                 'label' => '线路',
                 'attribute' => 'routeName',
-                'value' => 'routeName.logistics_route_name',
+                'value' => 'routeName',
             ],
             [
                 'label' => '司机',
-                'attribute' => 'driverTrueName',
-                'value' => 'driverTrueName.user_truename',
+                'attribute' => 'driverUsername',
+                'value' => 'driverUsername',
             ],
             [
                 'label' => '开单员',
-                'attribute' => 'trueName',
-                'value' => 'trueName.user_truename',
+                'attribute' => 'trueUsername',
+                'value' => 'trueUsername',
             ],
 //             [
 //                 'label' => '收货人区',
@@ -195,7 +193,7 @@ $this->params['leftmenus'] = $menus;
                 'template' => $template,
                 'buttons' => [
                 'return' => function ($url, $model, $key) {
-                        if(!($model->state&4)&&$model->collection==1&&empty($model->return_logistics_sn)&&$model->order_state==70){
+                        if(!($model->state&4)&&empty($model->return_logistics_sn)&&$model->order_state==70){
                             $url = '?r=return/create&order_id='.$model->order_id;
                             return Html::a('原返', $url,['title' => '原返']);
                         }else{

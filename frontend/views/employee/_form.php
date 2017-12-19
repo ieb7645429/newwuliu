@@ -60,6 +60,7 @@ use common\models\ShippingTpye;
   <div class="help-block"></div>
 <div class="title_bg">
     <span>发货信息</span>
+    <input type='hidden' name='hidname' id='hidname'>
 </div>
 <div class="table01">
     <div class="table_div">
@@ -168,7 +169,8 @@ use common\models\ShippingTpye;
     <?= $form->field($model, 'collection_poundage_two')->textInput(['maxlength' => true, 'value' => 2]) ?>
 </div>
 <div class="table_div_02">
-    <?= $form->field($model, 'make_from_price')->textInput(['maxlength' => true, 'value' => empty($model->make_from_price)?0:$model->make_from_price]) ?>
+    <?= $form->field($model, 'make_from_price')->textInput(['maxlength' => true, 'value' => 0,'readonly'=>'readonly']) ?>
+    <?php //= $form->field($model, 'make_from_price')->textInput(['maxlength' => true, 'value' => empty($model->make_from_price)?0:$model->make_from_price]) ?>
 </div>
 <div class="table_div_02">
     <?= $form->field($model, 'freight')->textInput(['maxlength' => true]) ?>
@@ -210,6 +212,22 @@ use common\models\ShippingTpye;
         <input type="hidden" id="status"  value="0">
         <input type="hidden" id="ismodify"  value="0">
         <?= Html::Button('保存', ['class' => 'btn btn-success','id'=>'submitButton']) ?>
+    </div>
+
+
+    <div class="title_bg">
+        <span>配件信息</span>
+    </div>
+    <div class="table01">
+        <div class="checkbox form-inline">
+            <?php foreach ($parts::getParts() as $key=>$val){?>
+            <?= $form->field($orderParts, 'p'.$key)->checkbox(['value'=>'1','label'=>$val]) ?>
+            <?php } ?>
+
+        </div>
+    </div>
+    <div class="form-group">
+        <?= Html::Button('保存', ['class' => 'btn btn-success','id'=>'submitButton2']) ?>
     </div>
 
     <?php ActiveForm::end(); ?>

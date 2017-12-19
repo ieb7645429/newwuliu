@@ -45,7 +45,7 @@ class TerminusPay extends IncomeTerminus
         // 外阜订单
         $query->andFilterWhere(['same_city' => 2]);
         // 订单状态为已完成
-        $query->andFilterWhere(['=', 'order_state' , Yii::$app->params['returnOrderStateDelivery']]);
+        $query->andFilterWhere(['=', 'order_state' , Yii::$app->params['orderStateDelivery']]);
         // 订单不能挂起
         $query->andFilterWhere(['abnormal' => 2]);
 

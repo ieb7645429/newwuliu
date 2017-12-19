@@ -12,12 +12,6 @@ class AreaController extends \yii\web\Controller
     {
 //         return $this->render('index');
     }
-
-    
-    
-    
-    
-    
     
     public function actions()
     {

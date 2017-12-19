@@ -73,28 +73,23 @@ $(function(){
      		return false;
      	}
         var getObj = $(this);
-        var chk_value =[];
-        $('input[name="print"]:checked').each(function(){
-            chk_value.push($(this).val()); 
-        });
-        if(chk_value.length==0){
+        var count = $('#count_js').val();
+        if(count==0||count=='0'){
             alert('请选择打印订单');
             return false;
         }
-        var data = {
-            'order_arr':chk_value
-        };
         getObj.attr('disabled','disabled');
         $.ajax({
              type: "post",
              url:'?r=sorting/goods-batch-edit',
-             data:data,
              dataType:'json',
              async:true,
              success:function(data){
                 getObj.attr('disabled',false);
                 alert(data.message);
-                location.replace(location.href);
+                for(var i=0;i<data.data.length;i++){
+                	$('.order_'+data.data[i]).removeClass('operation').addClass('finish');
+                }
             }
       });
     })
@@ -104,17 +99,13 @@ $(function(){
      		return false;
      	}
         var getObj = $(this);
-    	var chk_value =[];
-        $('input[name="print"]:checked').each(function(){
-            chk_value.push($(this).val()); 
-        });
-        if(chk_value.length==0){
-            alert('请选择提交订单');
+        var count = $('#count_js').val();
+        if(count==0||count=='0'){
+            alert('请选择打印订单');
             return false;
         }
         getObj.attr('disabled','disabled');
         var data = {
-        		'order_arr':chk_value,
         		'order_state':10,
         };
         $.ajax({

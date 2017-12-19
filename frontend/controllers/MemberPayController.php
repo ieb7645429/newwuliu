@@ -15,7 +15,7 @@ use common\models\ApplyForWithdrawalSearch;
 use common\models\WithdrawalOrder;
 use common\models\WithdrawalOrderSearch;
 use common\models\OrderThirdAdvance;
-use common\models\OrderThirdAdvancesearch;
+use common\models\OrderThirdAdvanceSearch;
 
 class MemberPayController extends \yii\web\Controller
 {
@@ -70,18 +70,25 @@ class MemberPayController extends \yii\web\Controller
         $params = Yii::$app->request->queryParams;
         $dataProvider = $searchModel->orderSearch($params,$add_time);
         $withdrawal_amount = empty(UserBalance::findOne(Yii::$app->user->id)->withdrawal_amount)?0:UserBalance::findOne(Yii::$app->user->id)->withdrawal_amount;
-        if($withDrawalType==1){
-            return $this->render('payable-another',[
-                    'searchModel' => $searchModel,
-                    'withdrawalOrder' => $withdrawalOrder,
-                    'dataProvider' => $dataProvider,
-                    'type' => $withDrawalType,
-                    'withdrawal_amount' => $withdrawal_amount,
-                    'add_time' => $add_time,
-                    'menus' => $this->_getMenus(),
-            ]);
+        if($withDrawalType==1){//提现列表
+            $html = 'payable-another';
         }else{
-            return $this->render('payable',[
+            $html = 'payable';
+        }
+        //清除cookie
+        $cookies = Yii::$app->request->cookies;
+        $count = 0;
+        if(empty($params['page'])){
+            if(isset($cookies['checkbox'])){
+                $checkbox = $cookies->get('checkbox');
+                Yii::$app->response->cookies->remove($checkbox);
+            }
+        }else{
+            if(isset($cookies['checkbox'])){
+                $count = count(explode('-',$cookies->get('checkbox')));
+            }
+        }
+        return $this->render($html,[
                     'searchModel' => $searchModel,
                     'withdrawalOrder' => $withdrawalOrder,
                     'dataProvider' => $dataProvider,
@@ -89,9 +96,8 @@ class MemberPayController extends \yii\web\Controller
                     'withdrawal_amount' => $withdrawal_amount,
                     'add_time' => $add_time,
                     'menus' => $this->_getMenus(),
-                    'withdrawal_amount' => $withdrawal_amount,
+                    'count'=>$count,
             ]);
-        }
         
     }
     
@@ -136,16 +142,25 @@ class MemberPayController extends \yii\web\Controller
 		$bank  = new BankInfo();
 		$widthDrawalLog = new WithdrawalLog();
 		$withDrawalOrder = new WithdrawalOrder();
+		$userBalance = new UserBalance();
         try{
             $tr = Yii::$app->db->beginTransaction();
-            $amount = empty(UserBalance::findOne(Yii::$app->user->id)->withdrawal_amount)?0:UserBalance::findOne(Yii::$app->user->id)->withdrawal_amount;
-            if(!empty(Yii::$app->request->post('order_arr'))){
-                $IsWithdrawal = $withDrawalOrder->isWithdrawal(Yii::$app->request->post('order_arr'));
+            $userModel = UserBalance::findOne(Yii::$app->user->id);
+            $amount = empty($userModel->withdrawal_amount)?0:$userModel->withdrawal_amount;//余额
+            $order_arr = array();
+            $cookies = Yii::$app->request->cookies;
+            if(!isset($cookies['checkbox'])&&$userModel->is_withdrawal==1){
+                throw new Exception('请选择订单', '1');
+            }
+            if(isset($cookies['checkbox'])){
+                $order_arr = explode('-',$cookies->get('checkbox'));
+                $IsWithdrawal = $withDrawalOrder->isWithdrawal($order_arr);
+
                 if($IsWithdrawal){
                     throw new Exception('订单已经提现', '1');
                 }
                 $amount = 0;
-                foreach(Yii::$app->request->post('order_arr') as $key=>$value){
+                foreach($order_arr as $key=>$value){
                     if($this->_orderValidate($value)){
                         throw new Exception('提现订单异常', '1');
                     }
@@ -165,10 +180,12 @@ class MemberPayController extends \yii\web\Controller
 			if($res === false){
                 throw new Exception('提现失败', '1');
             }
-            $stateRes = $model->withdrawalStateEdit(Yii::$app->request->post('order_arr'));
+            $stateRes = $model->withdrawalStateEdit($order_arr);
             if(!$stateRes){
                 throw new Exception('状态修改失败', '1');
             }
+            Yii::$app->response->cookies->remove($cookies->get('checkbox'));
+            
             $tr->commit();
             $result = ['error'=>0,'message'=>'提现成功'];
         }catch(Exception $e){
@@ -202,7 +219,7 @@ class MemberPayController extends \yii\web\Controller
         $params= Yii::$app->request->queryParams;
         $params['OrderThirdAdvanceSearch']['member_id'] = Yii::$app->user->id;
         $params['OrderThirdAdvanceSearch']['state'] = 1;
-        $searchModel = new OrderThirdAdvancesearch();
+        $searchModel = new OrderThirdAdvanceSearch();
         $dataProvider = $searchModel->search($params);
         $query = serialize($dataProvider->query);
         $query= unserialize($query);
@@ -213,6 +230,72 @@ class MemberPayController extends \yii\web\Controller
                 'sumAmount' => $sumAmount,
                 'menus' => $this->_getMenus(),
         ]);
+    }
+    //设置cookie
+    public function actionAddCookie(){
+        $count = 0;
+        $cookies = Yii::$app->request->cookies;
+        if(isset($cookies['checkbox'])){
+            $order_arr = explode('-',$cookies->get('checkbox'));
+            foreach(Yii::$app->request->post('order_arr') as $value){
+                if(!in_array($value,$order_arr)){
+                    array_push($order_arr,$value);
+                }
+            }
+            
+            $order_str = implode('-',$order_arr);
+            //设置cookie
+            Yii::$app->response->cookies->add(new \yii\web\Cookie([
+                    'name' => 'checkbox',
+                    'value' => $order_str,
+                ])
+            );
+            $count = count($order_arr);
+        }else{
+            $order_str = implode('-',Yii::$app->request->post('order_arr'));
+            Yii::$app->response->cookies->add(new \yii\web\Cookie([
+                    'name' => 'checkbox',
+                    'value' => $order_str,
+                ])
+            );
+            $count = count(Yii::$app->request->post('order_arr'));
+        }
+        
+        return json_encode($count);
+    }
+    //设置cookie
+    public function actionDelCookie(){
+        $count = 0;
+        $cookies = Yii::$app->request->cookies;
+        if(isset($cookies['checkbox'])){
+            $order_str = $cookies->get('checkbox');
+            $order_arr = explode('-',$order_str);
+            foreach(Yii::$app->request->post('order_arr') as $value){
+                if(in_array($value,$order_arr)){
+                    $key = array_keys($order_arr,$value);
+                    unset($order_arr[$key[0]]);
+                }
+            }
+            $order_str = implode('-',$order_arr);
+            //设置cookie
+            Yii::$app->response->cookies->add(new \yii\web\Cookie([
+                    'name' => 'checkbox',
+                    'value' => $order_str,
+                ])
+            );
+            $count = count($order_arr);
+        }
+        return json_encode($count);
+    }
+    //计算订单提现价格
+    public function actionGetTotal(){
+        $withdrawalOrder = new WithdrawalOrder();
+        $total = 0;
+        $order_arr = explode('-',Yii::$app->request->cookies->get('checkbox'));
+        foreach($order_arr as $value){
+            $total += $withdrawalOrder::findOne(['order_sn'=>$value])->amount;
+        }
+        return json_encode($total);
     }
     
     

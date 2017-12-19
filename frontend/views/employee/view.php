@@ -9,6 +9,7 @@ use common\models\GoodsInfo;
 use common\models\LogisticsOrder;
 use common\models\LogisticsRoute;
 use backend\models\OrderRemark;
+use common\models\OrderParts;
 use frontend\assets\EmployeeEditAsset;
 EmployeeEditAsset::register($this);
 
@@ -170,6 +171,13 @@ if($role != '落地点'){
                 },
             ],
 
+            [
+                'label' => '配件',
+                'value' =>function($model) {
+                    return OrderParts::getPartsName($model->order_id);
+                },
+            ]
+
             
 
 //             'logistics_route_id',
@@ -295,6 +303,40 @@ if($role != '落地点'){
                         }
                         else
                         {
+                            return date('Y-m-d H:i:s',$value);
+                        }
+                    },
+                ],
+                [
+                    'attribute' =>'order_id',
+                    'label' => '扫码开始时间',
+                    'value' => function($model) {
+//                        return date('Y-m-d H:i:s',LogisticsOrder :: getMoreTime($model->order_id)['pay_time']);
+                        if (empty(LogisticsOrder :: getThenTime($model->order_id)['0']))
+                        {
+                            return'时间未设置';
+                        }
+                        else
+                        {
+                            $value = LogisticsOrder :: getThenTime($model->order_id)['0']['update_time'];
+                            return date('Y-m-d H:i:s',$value);
+                        }
+
+                    },
+                ],
+                [
+                    'attribute' =>'order_id',
+                    'label' => '扫码结束时间',
+                    'value' => function($model) {
+//                        return date('Y-m-d H:i:s',LogisticsOrder :: getMoreTime($model->order_id)['pay_time']);
+                        if (empty(LogisticsOrder :: getThenTime($model->order_id)['1']))
+                        {
+                            $value = LogisticsOrder :: getThenTime($model->order_id)['0']['update_time'];
+                            return date('Y-m-d H:i:s',$value);
+                        }
+                        else
+                        {
+                            $value = LogisticsOrder :: getThenTime($model->order_id)['1']['update_time'];
                             return date('Y-m-d H:i:s',$value);
                         }
                     },

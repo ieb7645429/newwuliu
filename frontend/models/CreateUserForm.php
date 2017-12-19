@@ -47,6 +47,16 @@ class CreateUserForm extends Model
     public $buy_out_time;
     public $small_num;
 
+    //司机情况下不验证数据规则
+    const SCENARIO_DRIVER = 'driver';
+//
+    public function scenarios()
+    {
+        $scenarios = parent::scenarios();
+        $scenarios[self::SCENARIO_DRIVER] = ['username', 'email','password','member_phone','user_truename', 'member_provinceid', 'member_cityid'];
+        return $scenarios;
+    }
+
     /**
      * @inheritdoc
      */
@@ -86,12 +96,14 @@ class CreateUserForm extends Model
         if (!$this->validate()) {
             return null;
         }
-        
+
+
         $userAll = new UserAll();
         $userAll->username = $this->username;
         $userAll->setPassword($this->password);
         $userAll->generateAuthKey();
         $userAll->area = 'sy';
+
         if(!$userAll->save()) {
             return false;
         }
@@ -101,12 +113,47 @@ class CreateUserForm extends Model
         $user->username = $this->username;
         $user->member_phone = $this->member_phone;
         $user->user_truename = $this->user_truename;
-        $user->member_areaid = $this->member_areaid;
+        $user->member_areaid = isset($this->member_areaid) ? $this->member_areaid : 0;
         $user->member_cityid = $this->member_cityid;
         $user->member_provinceid = $this->member_provinceid;
         $user->member_areainfo = $this->member_areainfo;
         $user->small_num = $this->small_num;
-        return $user->save() ? $user : null;
+        return $user->save() ? $user : $user->errors;
+    }
+
+    /**
+     * 注册黑龙江
+     *
+     * @return User|null the saved model or null if saving fails
+     */
+    public function signup1()
+    {
+        if (!$this->validate()) {
+            return null;
+        }
+
+
+        $userAll = new UserAll();
+        $userAll->username = $this->username;
+        $userAll->setPassword($this->password);
+        $userAll->generateAuthKey();
+        $userAll->area = 'hlj';
+
+        if(!$userAll->save()) {
+            return false;
+        }
+
+        $user = new \frontend\modules\hlj\models\User();
+        $user->id = $userAll->id;
+        $user->username = $this->username;
+        $user->member_phone = $this->member_phone;
+        $user->user_truename = $this->user_truename;
+        $user->member_areaid = isset($this->member_areaid) ? $this->member_areaid : 0;
+        $user->member_cityid = $this->member_cityid;
+        $user->member_provinceid = $this->member_provinceid;
+        $user->member_areainfo = $this->member_areainfo;
+        $user->small_num = $this->small_num;
+        return $user->save() ? $user : $user->errors;
     }
     
     public function attributeLabels(){

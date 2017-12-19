@@ -18,7 +18,8 @@ echo Html::a('申请提现', '#', [
 Modal::begin([
         'id' => 'create-modal',
         'header' => '<h4 class="modal-title">申请提现</h4>',
-]);?>
+]);
+?>
 
 <div class="payDiv">
 <div class="payInput">
@@ -33,6 +34,7 @@ Modal::begin([
 <?php Modal::end();
 $requestUrl = Url::toRoute('payable-div');
 ?>
+<input type="hidden" id="count" value=<?=$count?>>
 <input type="hidden" id="actionUrl" value="<?=$requestUrl?>">
 <input type="hidden" id="withdrawal_amount" value="<?=intval($withdrawal_amount)?>">
 <div class="withdrawal-log-index">
@@ -44,10 +46,12 @@ $requestUrl = Url::toRoute('payable-div');
              [
                 'class' => 'yii\grid\CheckboxColumn',
                 'name' => 'order_arr',
-                 'checkboxOptions' => function($searchModel, $key, $index, $column) {
+                'checkboxOptions' => function($searchModel, $key, $index, $column) {
                     return [
+                            'checked'=>$searchModel->getChecked($searchModel->order_sn),
                             'value' => $searchModel->order_sn,
                             'data-price' => $searchModel->amount,
+                            'class'=>'checkbox',
                         ];
                  },
                  'headerOptions' => ['style'=>'width:50px;'],
@@ -102,59 +106,3 @@ $requestUrl = Url::toRoute('payable-div');
         ],
     ]); ?>
 </div>
-
-<?php $js = <<<JS
-    $(document).on('click', 'input', function () {
-        var order_arr =[];
-        $('input[name="order_arr[]"]:checked').each(function(){
-            order_arr.push($(this).val()); 
-        });
-        if(order_arr.length==0){
-            $('#create').attr({'data-target':'#create-null'});
-        }else{
-            $('#create').attr({'data-target':'#create-modal'});
-        }
-    })
-
-    $(document).on('click', '#create', function () {
-        var order_arr =[];
-        var total = 0;
-        $('input[name="order_arr[]"]:checked').each(function(){
-            order_arr.push($(this).val()); 
-            total = accAdd(total,parseFloat($(this).data('price')));
-        });
-        if(order_arr.length==0){
-            alert('请选择提现订单');
-            $('#money').attr({'value':'0'});
-            $('#confirm').prop('disabled',true);
-            return false;
-        }else{
-            $('#money').attr({'value':total});
-            $('#confirm').prop('disabled',false);
-        }
-    });
-    function accAdd(arg1, arg2) {
-        var r1, r2, m, c;
-        try {r1 = arg1.toString().split(".")[1].length;}catch (e) {r1 = 0;}
-        try {r2 = arg2.toString().split(".")[1].length;}catch (e) {r2 = 0;}
-        c = Math.abs(r1 - r2);
-        m = Math.pow(10, Math.max(r1, r2));
-        if (c > 0) {
-            var cm = Math.pow(10, c);
-            if (r1 > r2) {
-                arg1 = Number(arg1.toString().replace(".", ""));
-                arg2 = Number(arg2.toString().replace(".", "")) * cm;
-            } else {
-                arg1 = Number(arg1.toString().replace(".", "")) * cm;
-                arg2 = Number(arg2.toString().replace(".", ""));
-            }
-        } else {
-            arg1 = Number(arg1.toString().replace(".", ""));
-            arg2 = Number(arg2.toString().replace(".", ""));
-        }
-        return (arg1 + arg2) / m;
-    }
-        
-JS;
-$this->registerJs($js);
-?>

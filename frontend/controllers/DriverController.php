@@ -2,6 +2,7 @@
 namespace frontend\controllers;
 
 use Yii;
+use yii\helpers\ArrayHelper;
 use common\models\LogisticsOrderSearch;
 use yii\base\Exception;
 use yii\web\Controller;
@@ -19,6 +20,7 @@ use common\models\LogisticsLines;
 use common\models\AppLogin;
 use common\models\LogisticsCar;
 use common\models\DriverConfig;
+use common\models\UserAll;
 
 class DriverController extends Controller
 {
@@ -47,7 +49,8 @@ class DriverController extends Controller
         $add_time = $this->getAddTime(Yii::$app->request->get('LogisticsOrder')['add_time']);
         //参数
         $params['logistics_sn'] = Yii::$app->request->get('LogisticsOrder')['logistics_sn'];
-        $params['goods_sn'] = Yii::$app->request->get('Goods')['goods_sn'];
+        $params['employee_id'] = Yii::$app->request->get('LogisticsOrder')['employee_id'];
+        $params['order_type'] = Yii::$app->request->get('LogisticsOrder')['order_type'];
         $orderList = $LogisticsOrder->getOrderList($params,$type,null,$add_time);
         //分页
         $pages = new Pagination(['totalCount' =>count($orderList), 'pageSize' => Yii::$app->params['page_size']]);
@@ -60,7 +63,11 @@ class DriverController extends Controller
                         'orderList'=>$model,
                         'pages' => $pages,
                         'add_time' => $add_time,
+                        'emoloyeeList'=> $this->_getEmployeeList(),
+                        'orderTypeList'=> ['1'=>'西部','3'=>'瑞胜','4'=>'塔湾'],
                         'menus' => $this->_getMenus(),
+                        'count' => $this->_CookieClear($orderList,'arr'),
+                        'order_arr' => $this->_GetOrderArr(),
                 ]
                 );
     }
@@ -76,7 +83,8 @@ class DriverController extends Controller
         $add_time = $this->getAddTime(Yii::$app->request->get('LogisticsOrder')['add_time']);
         //参数
         $params['logistics_sn'] = Yii::$app->request->get('LogisticsOrder')['logistics_sn'];
-        $params['goods_sn'] = Yii::$app->request->get('Goods')['goods_sn'];
+        $params['employee_id'] = Yii::$app->request->get('LogisticsOrder')['employee_id'];
+        $params['order_type'] = Yii::$app->request->get('LogisticsOrder')['order_type'];
         $orderList = $LogisticsOrder->getOrderList($params,$type,null,$add_time);
         //分页
         $pages = new Pagination(['totalCount' =>count($orderList), 'pageSize' => Yii::$app->params['page_size']]);
@@ -89,7 +97,11 @@ class DriverController extends Controller
                     'orderList'=>$model,
                     'pages' => $pages,
                     'add_time' => $add_time,
+                    'emoloyeeList'=> $this->_getEmployeeList(),
+                    'orderTypeList'=> ['1'=>'西部','3'=>'瑞胜','4'=>'塔湾'],
                     'menus' => $this->_getMenus(),
+                    'count' => $this->_CookieClear($orderList,'arr'),
+                    'order_arr' => $this->_GetOrderArr(),
                 ] 
                );
     }
@@ -107,7 +119,8 @@ class DriverController extends Controller
         //参数
         $params['time_type'] = Yii::$app->request->get('LogisticsOrder')['add_time'];
         $params['logistics_sn'] = Yii::$app->request->get('LogisticsOrder')['logistics_sn'];
-        $params['goods_sn'] = Yii::$app->request->get('Goods')['goods_sn'];
+        $params['employee_id'] = Yii::$app->request->get('LogisticsOrder')['employee_id'];
+        $params['order_type'] = Yii::$app->request->get('LogisticsOrder')['order_type'];
         //分页
         $dataSql = $LogisticsOrder->getOrderList($params,$type,null,$add_time);
         $count = $dataSql->count();
@@ -122,8 +135,12 @@ class DriverController extends Controller
                         'orderList'=>$orderList,
                         'orderTime'=>$OrderTime,
                         'add_time' => $add_time,
+                        'emoloyeeList'=> $this->_getEmployeeList(),
+                        'orderTypeList'=> ['1'=>'西部','3'=>'瑞胜','4'=>'塔湾'],
                         'pages' => $pages,
                         'menus' => $this->_getMenus(),
+                        'count' => $this->_CookieClear(null,'none'),
+                        'order_arr' => $this->_GetOrderArr(),
                 ]
                 );
         
@@ -144,7 +161,8 @@ class DriverController extends Controller
         //参数
         $params['time_type'] = Yii::$app->request->get('LogisticsOrder')['add_time'];
         $params['logistics_sn'] = Yii::$app->request->get('LogisticsOrder')['logistics_sn'];
-        $params['goods_sn'] = Yii::$app->request->get('Goods')['goods_sn'];
+        $params['employee_id'] = Yii::$app->request->get('LogisticsOrder')['employee_id'];
+        $params['order_type'] = Yii::$app->request->get('LogisticsOrder')['order_type'];
         //分页
         $dataSql =  $LogisticsOrder->getOrderList($params,$type,null,$add_time);
         $count = $dataSql->count();
@@ -159,6 +177,8 @@ class DriverController extends Controller
                     'orderList'=>$orderList,
                     'orderTime'=>$OrderTime,
                     'add_time' => $add_time,
+                    'emoloyeeList'=> $this->_getEmployeeList(),
+                    'orderTypeList'=> ['1'=>'西部','3'=>'瑞胜','4'=>'塔湾'],
                     'pages' => $pages,
                     'menus' => $this->_getMenus(),
                 ]
@@ -180,7 +200,8 @@ class DriverController extends Controller
         //参数
         $params['time_type'] = Yii::$app->request->get('LogisticsOrder')['add_time'];
         $params['logistics_sn'] = Yii::$app->request->get('LogisticsOrder')['logistics_sn'];
-        $params['goods_sn'] = Yii::$app->request->get('Goods')['goods_sn'];
+        $params['employee_id'] = Yii::$app->request->get('LogisticsOrder')['employee_id'];
+        $params['order_type'] = Yii::$app->request->get('LogisticsOrder')['order_type'];
         $params['print'] = Yii::$app->request->get('OrderPrintLog')['terminus'];
         //分页
         $dataSql = $LogisticsOrder->getOrderList($params,$type,null,$add_time,null);
@@ -197,10 +218,61 @@ class DriverController extends Controller
                     'orderList'=>$orderList,
                     'orderTime'=>$OrderTime,
                     'add_time' => $add_time,
+                    'emoloyeeList'=> $this->_getEmployeeList(),
+                    'orderTypeList'=> ['1'=>'西部','3'=>'瑞胜','4'=>'塔湾'],
                     'pages' => $pages,
                     'orderPrintLog' => $orderPrintLog,
                     'menus' => $this->_getMenus(),
                     'is_print'=>$driverConfig->getSmallPrintStatus(),
+                    'count' => $this->_CookieClear($LogisticsOrder->getOrderList($params,$type,null,$add_time,null),'obj'),
+                    'order_arr' => $this->_GetOrderArr(),
+                    'rule' => Yii::$app->request->queryParams['r'],
+                ]
+                );
+    }
+    /**
+     * 已原返
+     * 靳健
+     */
+    public function actionReturned(){
+        $goods = new Goods();
+        $LogisticsOrder = new LogisticsOrder(['scenario' => 'search']);
+        $OrderTime = new OrderTime(['scenario' => 'search']);
+        $orderPrintLog = new OrderPrintLog();
+        $driverConfig = new DriverConfig();
+        //获取查询订单列表
+        $type = 11;
+        $add_time = $this->getAddTime(Yii::$app->request->get('OrderTime')['ruck_time']);
+        //参数
+        $params['time_type'] = Yii::$app->request->get('LogisticsOrder')['add_time'];
+        $params['logistics_sn'] = Yii::$app->request->get('LogisticsOrder')['logistics_sn'];
+        $params['employee_id'] = Yii::$app->request->get('LogisticsOrder')['employee_id'];
+        $params['order_type'] = Yii::$app->request->get('LogisticsOrder')['order_type'];
+        $params['print'] = Yii::$app->request->get('OrderPrintLog')['terminus'];
+        //分页
+        $dataSql = $LogisticsOrder->getOrderList($params,$type,null,$add_time,null);
+        $count = $dataSql->count();
+        $pages = new Pagination(['totalCount' =>$count, 'pageSize' => Yii::$app->params['page_size']]);
+        $orderList = $dataSql->offset($pages->offset)->limit($pages->limit)->asArray()->all();
+        $orderList = $this->addGoodsInfo($orderList);
+        $orderList = $LogisticsOrder->stateButtonType($orderList,1);
+        return $this->render('cityWide',
+                [
+                    'goods'=>$goods,
+                    'params'=>$params,
+                    'LogisticsOrder'=>$LogisticsOrder,
+                    'orderList'=>$orderList,
+                    'orderTime'=>$OrderTime,
+                    'add_time' => $add_time,
+                    'emoloyeeList'=> $this->_getEmployeeList(),
+                    'orderTypeList'=> ['1'=>'西部','3'=>'瑞胜','4'=>'塔湾'],
+                    'pages' => $pages,
+                    'orderPrintLog' => $orderPrintLog,
+                    'menus' => $this->_getMenus(),
+                    'is_print'=>$driverConfig->getSmallPrintStatus(),
+                    'count' => $this->_CookieClear($LogisticsOrder->getOrderList($params,$type,null,$add_time,null),'obj'),
+                    'order_arr' => $this->_GetOrderArr(),
+                    'rule' => Yii::$app->request->queryParams['r'],
                 ]
                 );
     }
@@ -223,7 +295,8 @@ class DriverController extends Controller
         //参数
         $params['time_type'] = Yii::$app->request->get('LogisticsOrder')['add_time'];
         $params['logistics_sn'] = Yii::$app->request->get('LogisticsOrder')['logistics_sn'];
-        $params['goods_sn'] = Yii::$app->request->get('Goods')['goods_sn'];
+        $params['employee_id'] = Yii::$app->request->get('LogisticsOrder')['employee_id'];
+        $params['order_type'] = Yii::$app->request->get('LogisticsOrder')['order_type'];
         //分页
         $dataSql = $LogisticsOrder->getOrderList($params,$type,null,$add_time,$where);
         $count = $dataSql->count();
@@ -239,10 +312,14 @@ class DriverController extends Controller
                         'orderList'=>$orderList,
                         'orderTime'=>$OrderTime,
                         'add_time' => $add_time,
+                        'emoloyeeList'=> $this->_getEmployeeList(),
+                        'orderTypeList'=> ['1'=>'西部','3'=>'瑞胜','4'=>'塔湾'],
                         'pages' => $pages,
                         'menus' => $this->_getMenus(),
                         'num' => $count,
                         'order_sn_id' => $order_sn_id,
+                        'count' => $this->_CookieClear(null,'none'),
+                        'order_arr' => $this->_GetOrderArr(),
                 ]
                 );
     }
@@ -267,7 +344,9 @@ class DriverController extends Controller
      */
     public function actionGoodsPrint(){
         $LogisticsOrder = new LogisticsOrder();
-        if($list = $LogisticsOrder->orderPrint(array(),Yii::$app->request->post('order_arr'),Yii::$app->request->post('loading'))){
+        $cookies = Yii::$app->request->cookies->get('checkbox');
+        $order_arr = explode('-',$cookies);
+        if($list = $LogisticsOrder->orderPrint(array(),$order_arr,0)){
             $list = $LogisticsOrder->getGoodsPrice($list,'driver');
             $result = [
                     'error'=>0,
@@ -341,7 +420,9 @@ class DriverController extends Controller
         $driverConfig = new DriverConfig();
         $tr = Yii::$app->db->beginTransaction();
         try{
-            $res = $order->ajaxOrderStateDriverEdit(Yii::$app->request->post('order_arr'));
+            $cookies = Yii::$app->request->cookies->get('checkbox');
+            $order_arr = explode('-',$cookies);
+            $res = $order->ajaxOrderStateDriverEdit($order_arr);
             if($res===false){
                 throw new Exception('处理失败', '1');
             }
@@ -351,10 +432,12 @@ class DriverController extends Controller
                 }
             }
             
-            $res2 = $routeLine->addLines(Yii::$app->request->post('order_arr'));
+            $res2 = $routeLine->addLines($order_arr);
             if($res2===false){
                 throw new Exception('line插入失败', '1');
             }
+            $checkbox = Yii::$app->request->cookies->get('checkbox');
+            Yii::$app->response->cookies->remove($checkbox);
 //             $appLogin->updateStateOne();
             $result = ['error'=>0,'message'=>'处理成功'];
             $tr -> commit();
@@ -371,10 +454,12 @@ class DriverController extends Controller
      */
     public function actionCityWidePrint(){
         $LogisticsOrder = new LogisticsOrder();
-        if($list = $LogisticsOrder->getOrderList(array(),8,Yii::$app->request->post('order_arr'))){
+        $cookies = Yii::$app->request->cookies->get('checkbox');
+        $order_arr = explode('-',$cookies);
+        if($list = $LogisticsOrder->getOrderList(array(),8,$order_arr)){
             $list = $LogisticsOrder->getGoodsPrice($list,'driver');
             $orderPrintLog = new OrderPrintLog();
-            $orderPrintLog->saveTerminusPrintLog(Yii::$app->request->post('order_arr'));
+            $orderPrintLog->saveTerminusPrintLog($order_arr);
             $result = [
                     'error'=>0,
                     'data'=>$list
@@ -433,7 +518,7 @@ class DriverController extends Controller
             $result = ['code'=>404,'message'=>'不存在符合条件订单'];
         }
         else{
-            $smallPrint->addSmallHistory($data);
+            $smallPrint->addSmallHistory($data,$driver_id);
             $result = ['code'=>200,'data'=>$data];
         }
         return json_encode($result);
@@ -443,19 +528,23 @@ class DriverController extends Controller
      */
     public function actionAjaxBatchScan(){
         $goods = new Goods();
-        $order_arr =Yii::$app->request->post('order_arr');
+        $cookies = Yii::$app->request->cookies->get('checkbox');
+        $order_arr = explode('-',$cookies);
+        $user_id = empty(Yii::$app->request->post('user_id'))?0:Yii::$app->request->post('user_id');
         $goods_arr = $goods->getGoodsArr($order_arr);
         $tr = Yii::$app->db->beginTransaction();
         try{
             $res = true;
             if(!empty($goods_arr)){
                 foreach($goods_arr as $key => $value){
-                    if(!$goods->upGoodsState($value)) $res = false;
+                        if(!$goods->upGoodsState($value,$user_id)) $res = false;
                 }
             }
             if($res===false){
                 throw new Exception('处理失败', '1');
             }
+            $checkbox = Yii::$app->request->cookies->get('checkbox');
+            Yii::$app->response->cookies->remove($checkbox);
             $result = ['error'=>0,'message'=>'处理成功'];
             $tr -> commit();
         }catch (Exception $e){
@@ -475,6 +564,24 @@ class DriverController extends Controller
             $result = ['code'=>200,'status'=>$result['status'],'message'=>'修改成功'];
         }else{
             $result = ['code'=>400,'message'=>'修改失败'];
+        }
+        return json_encode($result);
+    }
+    /**
+     * 订单异常恢复
+     */
+    public function actionRecoverEdit(){
+        $order = new LogisticsOrder();
+        if($order->recoverOrder(Yii::$app->request->post('order_id'),10)){
+            $result = [
+                    'error'=>200,
+                    'message'=>'恢复成功',
+            ];
+        }else{
+            $result = [
+                    'error'=>400,
+                    'message'=>'恢复失败',
+            ];
         }
         return json_encode($result);
     }
@@ -522,7 +629,7 @@ class DriverController extends Controller
                             }
                         }
                         if ($carType == 2) {
-                            if($item['url'][0] == '/driver/city-wide'||$item['url'][0] == '/driver/over') {
+                            if($item['url'][0] == '/driver/city-wide'||$item['url'][0] == '/driver/returned'||$item['url'][0] == '/driver/over') {
                                 unset($menu['items'][$key]);
                                 continue;
                             }
@@ -544,6 +651,7 @@ class DriverController extends Controller
             'index-another' => ['menu' => '/driver/index', 'item' => '/driver/index-another'],
             'myself' => ['menu' => '/driver/index', 'item' => '/driver/myself'],
             'city-wide' => ['menu' => '/driver/index', 'item' => '/driver/city-wide'],
+            'returned' => ['menu' => '/driver/index', 'item' => '/driver/returned'],
             'over' => ['menu' => '/driver/index', 'item' => '/driver/over'],
             'abnormal' => ['menu' => '/driver/index', 'item' => '/driver/abnormal'],
             'pay' => ['menu' => '/driver/pay', 'item' => false],
@@ -580,5 +688,58 @@ class DriverController extends Controller
             $goodsList[$key]['carInfo'] = $carInfo::findOne(['logistics_car_id'=>$value['car_id']]);
         }
         return $goodsList;
+    }
+    /**
+     * 清除cookie
+     * @param unknown $data
+     * @param string $type  arr数组  obj对象 none默认不选中
+     */
+    private function _CookieClear($data,$type = 'obj'){
+        $cookies = Yii::$app->request->cookies;
+        $count = 0;
+        if(empty(Yii::$app->request->queryParams['page'])){
+                //删除cookie
+                if(isset($cookies['checkbox'])){
+                    $checkbox = $cookies->get('checkbox');
+                    Yii::$app->response->cookies->remove($checkbox);
+                }
+                //默认不选中
+                if($type=='none'){
+                    return $count;
+                }
+                //默认cookie全部选中
+                if($type=='arr'){
+                    $order_arr = ArrayHelper::getColumn($data,'order_id');
+                }else if($type=='obj'){
+                    $order_arr = ArrayHelper::getColumn($data->asArray()->all(),'order_id');
+                }
+                $order_str = implode('-',$order_arr);
+                //添加新cookie
+                Yii::$app->response->cookies->add(new \yii\web\Cookie([
+                        'name' => 'checkbox',
+                        'value' => $order_str,
+                    ])
+                );
+                $count = count($order_arr);
+        }else{
+            if(isset($cookies['checkbox'])){
+                $count = count(explode('-',$cookies->get('checkbox')));
+            }
+        }
+        return  $count;
+    }
+    //获取cookie
+    private function _GetOrderArr(){
+        $cookies = Yii::$app->request->cookies;
+        if(isset($cookies['checkbox'])){
+            return explode('-',$cookies->get('checkbox'));
+        }
+        return array();
+    }
+    //开单员列表
+    private function _getEmployeeList(){
+        $userAll = new UserAll();
+        $userList = $userAll->find()->where(['like','username','kd0240%',false])->asArray()->all();
+        return ArrayHelper::map($userList, 'id', 'username');
     }
 }

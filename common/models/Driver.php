@@ -29,6 +29,7 @@ class Driver extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
+            ['driver_id', 'safe'],
             [['logistics_car_id', 'member_id'], 'integer'],
             [['add_time'], 'string', 'max' => 255],
         ];
@@ -46,7 +47,52 @@ class Driver extends \yii\db\ActiveRecord
             'add_time' => 'Add Time',
         ];
     }
-    
+
+    /**
+     * @Author:Fenghuan
+     * @param $id
+     * @return static
+     */
+    public static function findModel($id)
+    {
+        return self::findOne($id);
+    }
+
+    /**
+     * @Author:Fenghuan
+     * @param $condition
+     * @return array|null|\yii\db\ActiveRecord
+     * @internal param $data
+     */
+    public function findOneModel($condition)
+    {
+        return self::find()->where($condition)->one();
+    }
+
+    /**
+     * @Author:Fenghuan
+     * @param $data
+     * @param $condition
+     * @return int
+     */
+    public function updateDriver($data, $condition)
+    {
+        return self::updateAll($data, $condition);
+    }
+
+
+    /**
+     * driver -> user
+     * @Author:Fenghuan
+     * @return \yii\db\ActiveQuery
+     */
+    public function getDriverJoinUser()
+    {
+        return $this->hasOne(User::className(), ['id' => 'member_id']);
+    }
+
+
+
     public function getCarTypeId($memberId) {
         $query = self::find();
         $result = $query -> select('logistics_car.car_type_id')
@@ -55,7 +101,14 @@ class Driver extends \yii\db\ActiveRecord
                          ->asArray()
                          -> one();
         return $result;
-    } 
+    }
+    
+    public function getVirtualDriverId() {
+        $result = self::find() -> innerJoin('logistics_car', 'logistics_car.logistics_car_id = driver.logistics_car_id')
+                               -> where('car_type_id = 4')
+                               -> one();
+       return $result;
+    }
     
     public function getLogisticsCarInfo(){
         return $this->hasOne(LogisticsCar::className(), ['logistics_car_id'=>'logistics_car_id']);
@@ -117,14 +170,23 @@ class Driver extends \yii\db\ActiveRecord
             $carModel->leftJoin('logistics_route','logistics_route.logistics_route_id = logistics_car.logistics_route_id')
                      ->where(['logistics_route.same_city'=>$same_city]);
         }
-        $carArr = $carModel->asArray()->All();
-        $driver_arr = array();
-        foreach($carArr as $value){
-            $model = $this::findOne(['logistics_car_id'=>$value['logistics_car_id']]);
-            if($model){
-                $driver_arr[$model->member_id] = $user::findOne($model->member_id)->username;
-            }
-        }
+//        $carArr = $carModel->asArray()->All();
+        $carArr = $carModel->select(['logistics_car.*', 'user.username', 'user.id'])
+                            ->leftJoin('driver', 'driver.logistics_car_id = logistics_car.logistics_car_id')
+                            ->leftJoin('user', 'user.id = driver.member_id')
+                            ->orderBy('user.username asc')
+                            ->asArray()
+                            ->all();
+
+        $driver_arr = ArrayHelper::map($carArr, 'id', 'username');
+
+//        $driver_arr = array();
+//        foreach($carArr as $value){
+//            $model = $this::findOne(['logistics_car_id'=>$value['logistics_car_id']]);
+//            if($model){
+//                $driver_arr[$model->member_id] = $user::findOne($model->member_id)->username;
+//            }
+//        }
         return $driver_arr;
     }
 }

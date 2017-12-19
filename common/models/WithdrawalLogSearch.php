@@ -137,7 +137,8 @@ class WithdrawalLogSearch extends WithdrawalLog
         ];
     
         $query->andFilterWhere(['like', 'content', $this->content])
-        ->andFilterWhere(['like', 'withdrawal_log.order_sn', $this->order_sn]);
+        ->andFilterWhere(['like', 'withdrawal_log.order_sn', $this->order_sn])
+        ->andFilterWhere(['<>', 'withdrawal_log.amount', 0]);
     
         return $dataProvider;
     }

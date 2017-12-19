@@ -59,6 +59,7 @@ class AppLogin extends \yii\db\ActiveRecord
 	public function SearchInfo($arr){
 	    return self::findOne($arr);
 	}
+
 	/**
 	* 改变状态
 	* 入参 $where,$value

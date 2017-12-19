@@ -25,25 +25,15 @@ $(function(){
         		return false;
         	} 
             var getObj = $(this);
-            var chk_value =[];
-            $('input[name="print"]:checked').each(function(){
-                chk_value.push($(this).val()); 
-            });
-            if(chk_value.length==0){
-                alert('请选择打印订单');
+            var count = $('#count_js').val();
+            if(count==0||count=='0'){
+                alert('请选择提交订单');
                 return false;
             }
             getObj.attr('disabled','disabled');
-            var data = {
-                'order_sn':$('.orderSn').val(),
-                'goods_sn':$('.goodsSn').val(),
-                'order_arr':chk_value,
-                'loading':0
-            };
             $.ajax({
                  type: "post",
                  url:'?r=driver/goods-print',
-                 data:data,
                  async:true,
                  success:function(data){
                     getObj.attr('disabled',false);
@@ -104,22 +94,15 @@ $(function(){
         		return false;
         	}
         	var getObj = $(this);
-            var chk_value =[];
-            $('input[name="print"]:checked').each(function(){
-                chk_value.push($(this).val()); 
-            });
-            if(chk_value.length==0){
+        	var count = $('#count_js').val();
+            if(count==0||count=='0'){
                 alert('请选择提交订单');
                 return false;
             }
             getObj.attr('disabled','disabled');
-            var data = {
-                    'order_arr':chk_value,
-                };
             $.ajax({
                 type: "post",
                 url:'?r=driver/ajax-batch-scan',
-                data:data,
                 async:true,
                 dataType:'json',
                 success:function(data){
@@ -146,22 +129,15 @@ $(function(){
         		return false;
         	}
         	var getObj = $(this);
-            var chk_value =[];
-            $('input[name="print"]:checked').each(function(){
-                chk_value.push($(this).val()); 
-            });
-            if(chk_value.length==0){
+        	var count = $('#count_js').val();
+            if(count==0||count=='0'){
                 alert('请选择提交订单');
                 return false;
             }
             getObj.attr('disabled','disabled');
-            var data = {
-                    'order_arr':chk_value,
-                };
             $.ajax({
                 type: "post",
                 url:'?r=driver/order-manage',
-                data:data,
                 async:true,
                 success:function(data){
                 	getObj.attr('disabled',false);
@@ -177,32 +153,4 @@ $(function(){
         	
         	
         })
-     $('#check_all').change(function(){
-    	 if($('#check_all').is(':checked')){
-	        $('.order_check').each(function(){
-	          if(!$(this).prop('disabled')){
-	             $(this).prop('checked',true);
-	          }
-	        })
-	      }else{
-	        $('input[type=checkbox]').prop('checked',false);
-	      }
-		   //计算选中数量
-		   CountCheckBox();
-     })
-     	//点击单个checkbox计算
-	$('input[name=print]').change(function(){
-	    CountCheckBox();
-	});
-	//统计checkbox选中数量
-	function CountCheckBox(){
-	 var count = 0;
-	 $("input[name=print]").each(function(){
-		 if($(this).is(':checked')){ 
-			count+=1;
-		 }
-	 });
-	 console.log(count);
-	 $('#count').html(count);
-	}   
 });

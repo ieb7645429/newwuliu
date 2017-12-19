@@ -1,6 +1,7 @@
 <?php
 
 namespace frontend\controllers;
+use yii\helpers\ArrayHelper;
 use yii\web\Controller;
 use yii\web\Response;
 use common\models\Goods;
@@ -22,6 +23,7 @@ use backend\models\OrderRemark;
 use backend\models\ReturnOrderRemark;
 use common\models\BankInfo;
 use common\models\LogisticsCar;
+use common\models\OrderAdvance;
 
 class TerminusController extends Controller
 {
@@ -85,6 +87,8 @@ class TerminusController extends Controller
                         'add_time' => $add_time,
                         'pages' => $pages,
                         'menus' => $this->_getMenus(),
+                        'count' => $this->_CookieClear($LogisticsOrder->getTerminusList($params,$type,null,$add_time,$driver_id,'obj')),
+                        'order_arr' => $this->_GetOrderArr(),
                 ]
                 );
     }
@@ -120,6 +124,8 @@ class TerminusController extends Controller
                         'add_time' => $add_time,
                         'orderPrintLog' => $orderPrintLog,
                         'menus' => $this->_getMenus(),
+                        'count' => $this->_CookieClear($LogisticsOrder->getTerminusList($params,$type,null,$add_time,0,Yii::$app->request->get('OrderPrintLog')['terminus'],'obj')),
+                        'order_arr' => $this->_GetOrderArr(),
                 ]
                 );
     }
@@ -142,7 +148,7 @@ class TerminusController extends Controller
         $pages = new Pagination(['totalCount' =>$count, 'pageSize' => Yii::$app->params['page_size']]);
         $orderList = $dataSql->offset($pages->offset)->limit($pages->limit)->asArray()->all();
         $orderList = $this->addGoodsInfo($orderList);
-        
+        $orderList = $this->replevyButton($orderList);
         return $this->render('over',
                 [
                         'goods'=>$goods,
@@ -261,7 +267,9 @@ class TerminusController extends Controller
      */
     public function actionGoodsPrint(){
         $LogisticsOrder = new LogisticsOrder();
-        if($list = $LogisticsOrder->getTerminusList(array('logistics_sn'=>'','goods_sn'=>''),7,Yii::$app->request->post('order_arr'))){
+        $cookies = Yii::$app->request->cookies->get('checkbox');
+        $order_arr = explode('-',$cookies);
+        if($list = $LogisticsOrder->getTerminusList(array('logistics_sn'=>'','goods_sn'=>''),7,$order_arr)){
            $list = $LogisticsOrder->getGoodsPrice($list,'terminus');
             $result = [
                 'error'=>0,
@@ -282,10 +290,12 @@ class TerminusController extends Controller
      */
     public function actionGoodsPrintOther(){
         $LogisticsOrder = new LogisticsOrder();
-        if($list = $LogisticsOrder->getTerminusList(array('logistics_sn'=>'','goods_sn'=>''),5,Yii::$app->request->post('order_arr'))){
+        $cookies = Yii::$app->request->cookies->get('checkbox');
+        $order_arr = explode('-',$cookies);
+        if($list = $LogisticsOrder->getTerminusList(array('logistics_sn'=>'','goods_sn'=>''),5,$order_arr)){
            $list = $LogisticsOrder->getGoodsPrice($list,'terminus');
            $orderPrintLog = new OrderPrintLog();
-           $orderPrintLog->saveTerminusPrintLog(Yii::$app->request->post('order_arr'));
+           $orderPrintLog->saveTerminusPrintLog($order_arr);
             $result = [
                     'error'=>0,
                     'data'=>$list
@@ -318,7 +328,14 @@ class TerminusController extends Controller
      */
     public function actionStateEdit(){
         $LogisticsOrder = new LogisticsOrder();
-        if($LogisticsOrder->ajaxOrderStateEdit(Yii::$app->request->post('order_arr'))){
+        $cookies = Yii::$app->request->cookies->get('checkbox');
+        $order_arr = explode('-',$cookies);
+        if($LogisticsOrder->ajaxOrderStateEdit($order_arr)&&!empty($order_arr)){
+            $cookies = Yii::$app->request->cookies;
+            if(isset($cookies['checkbox'])){
+                $checkbox = $cookies->get('checkbox');
+                Yii::$app->response->cookies->remove($checkbox);
+            }
             $result = [
                     'error'=>0,
                     'message'=>'处理成功'
@@ -383,7 +400,14 @@ class TerminusController extends Controller
      */
     public function actionAjaxAllOver(){
         $LogisticsOrder = new LogisticsOrder();
-        if($LogisticsOrder->ajaxOrderEdit(Yii::$app->request->post('order_arr'))){
+        $cookies = Yii::$app->request->cookies->get('checkbox');
+        $order_arr = explode('-',$cookies);
+        if($LogisticsOrder->ajaxOrderEdit($order_arr)&&!empty($order_arr)){
+            $cookies = Yii::$app->request->cookies;
+            if(isset($cookies['checkbox'])){
+                $checkbox = $cookies->get('checkbox');
+                Yii::$app->response->cookies->remove($checkbox);
+            }
             $result = [
                     'error'=>0,
                     'message'=>'处理成功',
@@ -577,7 +601,7 @@ class TerminusController extends Controller
         return '';
     }
     
-    /**
+    /** 
      * 取得menus
      * @return array[]|string[]
      */
@@ -639,5 +663,69 @@ class TerminusController extends Controller
             $goodsList[$key]['carInfo'] = $carInfo::findOne(['logistics_car_id'=>$value['car_id']]);
         }
         return $goodsList;
+    }
+    /**
+     * 清除cookie
+     * @param unknown $data
+     * @param string $type  arr数组  obj对象 none默认不选中
+     */
+    private function _CookieClear($data,$type = 'obj'){
+        $cookies = Yii::$app->request->cookies;
+        $count = 0;
+        if(empty(Yii::$app->request->queryParams['page'])){
+                //删除cookie
+                if(isset($cookies['checkbox'])){
+                    $checkbox = $cookies->get('checkbox');
+                    Yii::$app->response->cookies->remove($checkbox);
+                }
+                //默认不选中
+                if($type=='none'){
+                    return $count;
+                }
+                //默认cookie全部选中
+                if($type=='arr'){
+                    $order_arr = ArrayHelper::getColumn($data,'order_id');
+                }else if($type=='obj'){
+                    $order_arr = ArrayHelper::getColumn($data->asArray()->all(),'order_id');
+                }
+                $order_str = implode('-',$order_arr);
+                //添加新cookie
+                Yii::$app->response->cookies->add(new \yii\web\Cookie([
+                        'name' => 'checkbox',
+                        'value' => $order_str,
+                    ])
+                );
+                $count = count($order_arr);
+        }else{
+            if(isset($cookies['checkbox'])){
+                $count = count(explode('-',$cookies->get('checkbox')));
+            }
+        }
+        return  $count;
+    }
+    //获取cookie
+    private function _GetOrderArr(){
+        $cookies = Yii::$app->request->cookies;
+        if(isset($cookies['checkbox'])){
+            return explode('-',$cookies->get('checkbox'));
+        }
+        return array();
+    }
+    //获取追回按钮
+    private  function  replevyButton($orderList){
+        $advance = new OrderAdvance();
+        $orderReturn = new LogisticsReturnOrder();
+        if(!empty($orderList)){
+            foreach($orderList as $key => $value){
+                $advanceModel = $advance::findOne(['order_id'=>$value['order_id']]);
+                $orderRetrunModel = $orderReturn::findOne(['ship_logistics_sn'=>$value['logistics_sn']]);
+                if((!empty($advanceModel)&&$advanceModel->state==2)&&(empty($orderRetrunModel)||$orderRetrunModel->return_type!=3)){
+                    $orderList[$key]['replevyButton'] = 1;//显示可追回按钮
+                }else{
+                    $orderList[$key]['replevyButton'] = 2;
+                }
+            }
+        }
+        return $orderList;
     }
 }

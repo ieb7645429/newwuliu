@@ -28,9 +28,8 @@ Modal::begin([
     </div>
 </div>
 <?php Modal::end();?>
-<?php $form = ActiveForm::begin(['method'=>'get'])?>
+<?php $form = ActiveForm::begin(['action'=>['return-complete/index'],'method'=>'get'])?>
     <?= $form->field($return, 'logistics_sn',['labelOptions' => ['label' => Yii::$app->params['logistics_sn']]])->textInput(['value' => $params['logistics_sn']]) ?>
-    <?= $form->field($returnGoods, 'goods_sn',['labelOptions' => ['label' => Yii::$app->params['goods_sn']]])->textInput(['value' => $params['goods_sn']]) ?>
     <?= $form->field($return, 'add_time')->label('开单时间')->widget(DateRangePicker::classname(), [
             'convertFormat'=>true,
             'presetDropdown'=>true,
@@ -46,10 +45,13 @@ Modal::begin([
     <?php echo Html::submitButton('搜索', ['class'=>'btn btn-primary','name' =>'submit-button']) ?>
     <?php echo Html::button('打印', ['class'=>'btn btn-primary js-print']) ?>
 <?php ActiveForm::end()?>
-       
+<input type="hidden" id="count_js" value="<?=$check_count;?>">    
 <?php if(!empty($orderList)){?>
-    <table class="table tableTop tableTop50">
-       
+<?= LinkPager::widget(['pagination' => $pages]); ?>
+    <table class="table tableTop tableTop">
+       <tr class="row">
+              <div > 当前已选中<strong id="count"><?=$check_count;?></strong>项</div>
+          </tr>
        <tbody>
        <thead>
               <tr class="tableBg">
@@ -69,7 +71,7 @@ Modal::begin([
         ?>
             
           <tr class="info tr-order-<?php echo $value['order_id'];?>">
-          <td><?= Html::checkbox('print',true,['class'=>'order_check checkbox'.$value['order_id'],'value' => $value['order_id']]);?></td>
+          <td><?= Html::checkbox('print',in_array($value['order_id'],$order_arr)||!isset($_GET['page'])?true:false,['class'=>'order_check checkbox'.$value['order_id'],'value' => $value['order_id']]);?></td>
              <td><?php echo $value['logistics_sn']; ?></td>
              <td><?php echo $value['goods_price']; ?></td>
              <td><?php echo $value['member_name']; ?></td>

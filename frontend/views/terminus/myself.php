@@ -36,12 +36,16 @@ $this->params['leftmenus'] = $menus;
      <?php echo Html::button('打印送货单(正)', ['class'=>'btn btn-primary js-print-other-z']) ?>
 <?php ActiveForm::end()?>
 <div class="body-content">
+<input type="hidden" id="count_js" value="<?=$count;?>">
     </div>
     <?= LinkPager::widget(['pagination' => $pages]); ?>
 <?php if(!empty($orderList)){?>
     <table class="table tableTop">
        <tbody>
        <thead>
+       <tr class="row">
+              <div > 当前已选中<strong id="count"><?=$count;?></strong>项</div>
+          </tr>
               <tr class="tableBg">
               <th width="80px"><?= Html::checkbox('all',true,['style'=>'margin-right:5px','id'=>'check_all']);?>全选</th>
                  <th><?=Yii::$app->params['logistics_sn']?></th>
@@ -61,7 +65,7 @@ $this->params['leftmenus'] = $menus;
         ?>
             
           <tr class="info table-tr-<?=$value['order_id']?>">
-          <td><?= Html::checkbox('print',true,['class'=>'order_check checkbox'.$value['order_id'],'value' => $value['order_id']]);?></td>
+          <td><?= Html::checkbox('print',in_array($value['order_id'],$order_arr)||!isset($_GET['page'])?true:false,['class'=>'order_check checkbox'.$value['order_id'],'value' => $value['order_id']]);?></td>
              <td><?= Html::a($value['logistics_sn'], Url::to(['employee/view','id'=>$value['order_id']]),['target' => '_blank']) ?></td>
              <td><?php echo $value['goods_price']; ?></td>
              <td><?php echo $value['member_name']; ?></td>
@@ -81,7 +85,7 @@ $this->params['leftmenus'] = $menus;
                  <span class="operation" data-order-id="<?php echo $value['order_id']?>">完成</span>
              </td>
              <td class="go-return-<?= $value['order_id']?>">
-             <?php if($value['returnButton']==1&&$value['collection']==1&&empty($value['return_logistics_sn'])):?>
+             <?php if($value['returnButton']==1&&empty($value['return_logistics_sn'])):?>
                  <a href="?r=return/create&order_id=<?php echo $value['order_id']?>"><span class="lose">原返</span></a>
              <?php endif;?>
              </td>

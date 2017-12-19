@@ -13,6 +13,17 @@ use Yii;
  */
 class LogisticsCar extends \yii\db\ActiveRecord
 {
+
+    //created by fenghuan
+    const SCENARIO_CAR = 'car_number';
+    public function scenarios()
+    {
+        $scenarios = parent::scenarios();
+        $scenarios[self::SCENARIO_CAR] = [];
+        return $scenarios;
+    }
+
+
     /**
      * @inheritdoc
      */
@@ -21,15 +32,23 @@ class LogisticsCar extends \yii\db\ActiveRecord
         return 'logistics_car';
     }
 
+
     /**
      * @inheritdoc
      */
     public function rules()
     {
         return [
-            [['logistics_route_id', 'car_type_id'], 'integer'],
+            [['car_number'], 'required'],
+            [['logistics_car_id', 'logistics_route_id', 'car_type_id'], 'integer'],
+            ['car_number', 'string'],
         ];
     }
+
+//    public function attributes()
+//    {
+//        return ['logistics_route_id', 'car_number', 'car_type_id'];
+//    }
 
     /**
      * @inheritdoc
@@ -40,8 +59,96 @@ class LogisticsCar extends \yii\db\ActiveRecord
             'logistics_car_id' => 'Logistics Car ID',
             'logistics_route_id' => 'Logistics Route ID',
             'car_type_id' => 'Car Type ID',
+            'car_number' => '车牌号',
         ];
     }
+
+    /**
+     * 通过线路id获取所有司机
+     * @Author:Fenghuan
+     * @param $condition
+     * @param $fields
+     * @return array|\yii\db\ActiveRecord[]
+     */
+    public function getUsersByCondition($condition, $fields)
+    {
+        return self::find()->select($fields)->leftJoin('driver', 'driver.logistics_car_id = logistics_car.logistics_car_id')->where($condition)->asArray()->all();
+    }
+
+    /**
+     * 根据线路获取所有司机
+     * @Author:Fenghuan
+     * @param $condition
+     * @param $fields
+     * @return array|\yii\db\ActiveRecord[]
+     */
+    public function getDriversByRoute($condition, $fields)
+    {
+        return self::find()
+            ->leftJoin('driver', 'logistics_car.logistics_car_id = driver.logistics_car_id')
+            ->leftJoin('user', 'driver.member_id = user.id')
+            ->select($fields)->where($condition)->asArray()->all();
+    }
+
+    /**
+     * car -> driver
+     * @Author:Fenghuan
+     * @return \yii\db\ActiveQuery
+     */
+    public function getCarOfDriver()
+    {
+        return $this->hasOne(Driver::className(), ['logistics_car_id' => 'logistics_car_id'])->joinWith('driverJoinUser');
+    }
+
+    /**
+     * 更新
+     * @Author:Fenghuan
+     * @param $data
+     * @param $condition
+     * @return int
+     */
+    public function updateCar($data, $condition)
+    {
+        return self::updateAll($data, $condition);
+    }
+
+    /**
+     * 一个线路多个车
+     * @Author:Fenghuan
+     * @param $condition
+     * @return array|\yii\db\ActiveRecord[]
+     */
+    public function selectCars($condition)
+    {
+        $data = self::find()->select(['car_number', 'logistics_car_id'])->where($condition)
+            ->orderBy('logistics_car_id')
+            ->indexBy('logistics_car_id')
+            ->column();
+
+        return $data;
+    }
+
+    /**
+     * @Author:Fenghuan
+     * @param $id
+     * @return static
+     */
+    public static function findModel($id)
+    {
+        return self::findOne($id);
+    }
+
+    /**
+     * @Author:Fenghuan
+     * @param $condition
+     * @return array|null|\yii\db\ActiveRecord
+     */
+    public function findOneModel($condition)
+    {
+        return self::find()->where($condition)->one();
+    }
+
+
     public function getDriverInfo(){
         return $this->hasOne(Driver::className(), ['logistics_car_id'=>'logistics_car_id']);
     }

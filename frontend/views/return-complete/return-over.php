@@ -12,9 +12,9 @@ $this->params['breadcrumbs'][] = $this->title;
 $this->params['leftmenus'] = $menus;
 ?>
 
-<?php $form = ActiveForm::begin(['method'=>'get'])?>
+<?php $form = ActiveForm::begin(['action'=>['return-complete/return-over'],'method'=>'get'])?>
     <?= $form->field($return, 'logistics_sn',['labelOptions' => ['label' => Yii::$app->params['logistics_sn']]])->textInput(['value' => $params['logistics_sn']]) ?>
-    <?= $form->field($returnGoods, 'goods_sn',['labelOptions' => ['label' => Yii::$app->params['goods_sn']]])->textInput(['value' => $params['goods_sn']]) ?>
+    
     <?= $form->field($return, 'add_time')->label('送货时间')->widget(DateRangePicker::classname(), [
             'convertFormat'=>true,
             'presetDropdown'=>true,
@@ -30,14 +30,17 @@ $this->params['leftmenus'] = $menus;
     <?php echo Html::submitButton('搜索', ['class'=>'btn btn-primary','name' =>'submit-button']) ?>
     <?php echo Html::button('打印', ['class'=>'btn btn-primary js-print']) ?>
 <?php ActiveForm::end()?>
-        
+<input type="hidden" id="count_js" value="<?=$check_count;?>">
 <?php if(!empty($orderList)){?>
-    <table class="table tableTop tableTop50">
-       
+<?= LinkPager::widget(['pagination' => $pages]); ?>
+    <table class="table tableTop tableTop">
+       <tr class="row">
+              <div > 当前已选中<strong id="count"><?=$check_count;?></strong>项</div>
+          </tr>
        <tbody>
        <thead>
               <tr class="tableBg">
-              <th width="80px"><?= Html::checkbox('all',true,['style'=>'margin-right:5px','id'=>'check_all']);?>打印</th>
+              <th width="80px"><?= Html::checkbox('all',false,['style'=>'margin-right:5px','id'=>'check_all']);?>打印</th>
                  <th><?=Yii::$app->params['logistics_sn']?></th>
                  <th>代收款</th>
                  <th>运费</th>
@@ -57,7 +60,7 @@ $this->params['leftmenus'] = $menus;
             foreach($orderList as $key=>$value){
         ?>
           <tr class="info">
-          <td><?= Html::checkbox('print',true,['class'=>'order_check checkbox'.$value['order_id'],'value' => $value['order_id']]);?></td>
+          <td><?= Html::checkbox('print',in_array($value['order_id'],$order_arr)?true:false,['class'=>'order_check checkbox'.$value['order_id'],'value' => $value['order_id']]);?></td>
              <td><?php echo $value['logistics_sn']; ?></td>
              <td><?php echo $value['goods_price']; ?></td>
              <td><?php echo $value['freight']; ?></td>

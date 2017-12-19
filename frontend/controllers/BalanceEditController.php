@@ -167,6 +167,18 @@ class BalanceEditController extends \yii\web\Controller
         
     }
     
+    public function actionDelContent(){
+        $orderRemark = new OrderRemark();
+        $order_id = Yii::$app->request->post('order_id');
+        $delContent = Yii::$app->request->post('del_content');
+        if($orderRemark->addDelContent($order_id,$delContent)){
+            $result = ['code'=>200,'message'=>'备注成功','url'=>'?r=balance-edit/delete&id='.$order_id];
+        }else{
+            $result = ['code'=>400,'message'=>'备注失败'];
+        }
+        return json_encode($result);
+    }
+    
     
     
     /**

@@ -33,7 +33,7 @@ class Area extends \yii\db\ActiveRecord
         return [
             [['area_name'], 'required'],
             [['area_parent_id', 'area_sort', 'area_deep'], 'integer'],
-            [['area_name'], 'string', 'max' => 50],
+            [['area_name', 'pinyin_name'], 'string', 'max' => 50],
             [['area_region'], 'string', 'max' => 3],
         ];
     }
@@ -51,6 +51,28 @@ class Area extends \yii\db\ActiveRecord
             'area_deep' => 'Area Deep',
             'area_region' => 'Area Region',
         ];
+    }
+
+    /**
+     * Return one model
+     * @Author:Fenghuan
+     * @param $id
+     * @return static
+     */
+    public static function findModel($id)
+    {
+        return self::findOne($id);
+    }
+
+    /**
+     * 更新
+     * @Author:Fenghuan
+     * @param $data
+     * @param $condition
+     */
+    public function updateArea($data, $condition)
+    {
+        self::updateAll($data, $condition);
     }
 
     /*

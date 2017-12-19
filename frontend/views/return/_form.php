@@ -23,21 +23,25 @@ use common\models\ShippingTpye;
 </div>
 <div class="table01">
 	<div class="table_div">
-		<?= $form->field($model, 'member_phone')->textInput(['maxlength' => true]) ?>
+		<?= $form->field($model, 'member_phone')->textInput(['maxlength' => true,'readonly'=>'readonly']) ?>
 	</div>
 	<div class="table_div">
-		<?= $form->field($model, 'member_name')->textInput(['maxlength' => true]) ?>
+		<?= $form->field($model, 'member_name')->textInput(['maxlength' => true,'readonly'=>'readonly']) ?>
 	</div>
 </div>
 <div class="table01">
 	<div class="table_div">
-		<?= $form->field($model, 'member_cityid')->dropDownList(Area::getRegion(6), []) ?>
+		<?= $form->field($model, 'member_cityname')->textInput( ['value'=>Area::getAreaNameById($model->member_cityid),'readonly'=>'readonly'])->label('发货人城市') ?>
 	</div>
 	<div class="table_div">
-		<?= $form->field($model, 'goods_num')->textInput() ?>
+		<?= $form->field($model, 'goods_num')->textInput(['readonly'=>'readonly']) ?>
 	</div>
 	<div class="table_div">
-		<?= $form->field($model, 'goods_price')->textInput(['maxlength' => true]) ?>
+	<?php $disabled = $model->collection==1?false:true;?>
+		<?= $form->field($model, 'goods_price')->textInput(['maxlength' => true,'readonly'=>'readonly']) ?>
+	</div>
+	<div class="table_div">
+		<?= $form->field($model, 'member_cityid')->hiddenInput( ['value'=>$model->member_cityid])->label('') ?>
 	</div>
 </div>
 
@@ -46,34 +50,30 @@ use common\models\ShippingTpye;
 </div>
 <div class="table01">
 	<div class="table_div">
-		<?= $form->field($model, 'receiving_phone')->textInput(['maxlength' => true]) ?>
+		<?= $form->field($model, 'receiving_phone')->textInput(['maxlength' => true,'readonly'=>'readonly']) ?>
 	</div>
 	<div class="table_div">
-		<?= $form->field($model, 'receiving_name')->textInput(['maxlength' => true]) ?>
+		<?= $form->field($model, 'receiving_name')->textInput(['maxlength' => true,'readonly'=>'readonly']) ?>
 	</div>
 </div>
 <div class="table01">
-	<?php
-        echo $form->field($model, 'receiving_areaid')->label('收货人地址')->widget(\chenkby\region\Region::className(),[
-                'model'=>$model,
-                'url'=>\yii\helpers\Url::toRoute(['area/get-region']),
-                'province'=>[
-                        'attribute'=>'receiving_provinceid',
-                        'items'=>Area::getRegion(),
-                        'options'=>['class'=>'form-control form-control-inline sign-up-droplist','prompt'=>'选择省份', 'value' => Yii::$app->params['provinceId'], 'disabled' => 'disabled']
-                ],
-                'city'=>[
-                        'attribute'=>'receiving_cityid',
-                    'items'=>Area::getRegion(6),
-                        'options'=>['class'=>'form-control form-control-inline sign-up-droplist','prompt'=>'选择城市']
-                ],
-                'district'=>[
-                        'attribute'=>'receiving_areaid',
-                        'items'=>Area::getRegion($model['receiving_cityid']),
-                        'options'=>['class'=>'form-control form-control-inline sign-up-droplist','prompt'=>'选择县/区','disabled' => 'disabled','style'=>'display:none !important']
-                ]
-        ]);
-    ?>
+	<div class="table_div">
+		<?= $form->field($model, 'receiving_provincename')->textInput(['value'=>Area::getAreaNameById($model->receiving_provinceid),'readonly'=>'readonly'])->label('收货人地址') ?>
+	</div>
+	<div class="table_div">
+		<?= $form->field($model, 'receiving_cityname')->textInput(['value'=>Area::getAreaNameById($model->receiving_cityid),'readonly'=>'readonly'])->label('') ?>
+	</div>
+	<div class="table_div">
+		<?= $form->field($model, 'receiving_provinceid')->hiddenInput( ['value'=>$model->receiving_provinceid])->label('') ?>
+	</div>
+	<div class="table_div">
+		<?= $form->field($model, 'receiving_cityid')->hiddenInput( ['value'=>$model->receiving_cityid])->label('') ?>
+	</div>
+</div>
+<div class="table01">
+    <div class="area_div">
+        <?= $form->field($model, 'receiving_name_area')->textInput(['maxlength' => true]) ?>
+    </div>
 </div>
 <div class="table01">
 	<div class="area_div">
@@ -85,15 +85,18 @@ use common\models\ShippingTpye;
 </div>
 <div class="table01">
 	<div class="table_big_div">
-		<?= $form->field($model, 'shipping_type')->dropDownList(ShippingTpye::getReturnShippingType()) ?>
+		<?= $form->field($model, 'shipping_typename')->textInput(['value'=>ShippingTpye::getShippingTypeNameById($model->shipping_type),'readonly'=>'readonly'])->label('运费付款方式') ?>
+	</div>
+	<div class="table_big_div">
+		<?= $form->field($model, 'shipping_type')->hiddenInput( ['value'=>$model->shipping_type])->label('')  ?>
 	</div>
 </div>
 <div class="table01">
 	<div class="table_div">
-		<?= $form->field($model, 'make_from_price')->textInput(['maxlength' => true,'value'=>empty($model->make_from_price)?0:$model->make_from_price]) ?>
+		<?= $form->field($model, 'make_from_price')->textInput(['maxlength' => true,'value'=>empty($model->make_from_price)?0:$model->make_from_price,'readonly' => 'readonly']) ?>
 	</div>
 	<div class="table_div">
-		<?= $form->field($model, 'freight')->textInput(['maxlength' => true]) ?>
+		<?= $form->field($model, 'freight')->textInput(['maxlength' => true,'readonly' => 'readonly']) ?>
 	</div>
 </div>
 

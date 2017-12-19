@@ -20,7 +20,7 @@ $this->params['leftmenus'] = $menus;
 <input type="hidden" id="tag_print" value="<?=$print?>">
 <input type="hidden" id="tag_order_id" value="<?=$model->order_id?>">
 <div class="logistics-return-order-view">
-
+<input type="hidden" id="return_type" value="1">
     <h1><?= Html::encode($this->title) ?></h1>
 
     <p>

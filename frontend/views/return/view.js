@@ -4,6 +4,11 @@ $(function(){
 		setTimeout(function(){
 			goPrint(orderId);
 			goPrintSj(orderId);
+//			if($('#return_type').val()==3){
+//				setTimeout(function(){
+//					window.location.href = "?r=terminus/over";
+//				},2000);
+//			}
 		},1000);
 	}
     $('.js-print').click(function(){
@@ -19,6 +24,7 @@ $(function(){
 		goPrintSj(orderId)
     })
     function goPrint(order_id){
+    	var return_type = $('#return_type').val();
     	var data = {
             'order_id':orderId,
         };
@@ -30,7 +36,7 @@ $(function(){
              success:function(data){
                 var obj = $.parseJSON(data);
                 console.log(obj);
-                print_goods_tag(obj,1);//1退货状态
+                print_goods_tag(obj,return_type);//1退货状态
             }
         })
     }

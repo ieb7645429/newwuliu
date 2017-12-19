@@ -12,9 +12,8 @@ $this->params['breadcrumbs'][] = $this->title;
 $this->params['leftmenus'] = $menus;
 ?>
 
-<?php $form = ActiveForm::begin(['method'=>'get'])?>
+<?php $form = ActiveForm::begin(['action'=>['instock/history-list'],'method'=>'get'])?>
     <?= $form->field($return, 'logistics_sn',['labelOptions' => ['label' => Yii::$app->params['logistics_sn']]])->textInput(['value' => $params['logistics_sn']]) ?>
-    <?= $form->field($returnGoods, 'goods_sn',['labelOptions' => ['label' => Yii::$app->params['goods_sn']]])->textInput(['value' => $params['goods_sn']]) ?>
     <?= $form->field($return, 'add_time')->label('开单时间')->widget(DateRangePicker::classname(), [
             'convertFormat'=>true,
             'presetDropdown'=>true,
@@ -33,11 +32,17 @@ $this->params['leftmenus'] = $menus;
 <?php ActiveForm::end()?>
         
 <?php if(!empty($orderList)){?>
-<div>总计:<?= $count;?>票</div>
+<?= LinkPager::widget(['pagination' => $pages]); ?>
+
+<input type="hidden" id="count_js" value="<?=$check_count;?>">
     <table class="table tableTop tableTop10">
        
        <tbody>
        <thead>
+       <tr class="row">
+       <div>总计:<?= $count;?>票</div>
+              <div > 当前已选中<strong id="count"><?=$check_count;?></strong>项</div>
+          </tr>
               <tr class="tableBg">
               <th width="80px"><?= Html::checkbox('all',true,['style'=>'margin-right:5px','id'=>'check_all']);?>全选</th>
                  <th><?=Yii::$app->params['logistics_sn']?></th>
@@ -55,7 +60,7 @@ $this->params['leftmenus'] = $menus;
         ?>
             
           <tr class="info">
-          <td><?= Html::checkbox('print',true,['class'=>'order_check checkbox'.$value['order_id'],'value' => $value['order_id']]);?></td>
+          <td><?= Html::checkbox('print',in_array($value['order_id'],$order_arr)||!isset($_GET['page'])?true:false,['class'=>'order_check checkbox'.$value['order_id'],'value' => $value['order_id']]);?></td>
              <td><?php echo $value['logistics_sn']; ?></td>
              <td><?php echo $value['goods_price']; ?></td>
              <td><?php echo $value['member_name']; ?></td>

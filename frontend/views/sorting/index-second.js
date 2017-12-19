@@ -72,17 +72,13 @@ $(function(){
      		return false;
      	}
         var getObj = $(this);
-    	var chk_value =[];
-        $('input[name="print"]:checked').each(function(){
-            chk_value.push($(this).val()); 
-        });
-        if(chk_value.length==0){
-            alert('请选择提交订单');
+        var count = $('#count_js').val();
+        if(count==0||count=='0'){
+            alert('请选择打印订单');
             return false;
         }
         getObj.attr('disabled','disabled');
         var data = {
-        		'order_arr':chk_value,
         		'order_state':20,
         };
         $.ajax({

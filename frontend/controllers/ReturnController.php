@@ -10,6 +10,8 @@ use common\models\LogisticsOrder;
 use common\models\LogisticsReturnOrderSearch;
 use common\models\ReturnOrderTime;
 use common\models\ReturnInfo;
+use common\models\WithdrawalOrder;
+use common\models\WithdrawalLog;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
@@ -19,6 +21,7 @@ use common\models\User;
 use yii\web\Response;
 use mdm\admin\components\MenuHelper;
 use backend\models\ReturnOrderRemark;
+use backend\models\OrderAdvance;
 
 /**
  * ReturnController implements the CRUD actions for LogisticsReturnOrder model.
@@ -51,8 +54,16 @@ class ReturnController extends Controller
 //        var_dump($searchModel->return_manage_id);exit();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams,$this->_getIdentity());
         //统计
+        if (Yii::$app->request->get('download_type', '0')) {
+            if($dataProvider->query->count()==0){
+                Yii::$app->getSession()->setFlash('error', '当前没有导出数据');
+                return $this->redirect(['index']);
+            }
+            return $this->_downloadExcel($dataProvider);
+        }
         $count['order_num'] = $dataProvider->query->count();
         $count['order_price'] = $dataProvider->query->sum('goods_price');
+        $count['freight'] = $dataProvider->query->sum('freight');
         
         return $this->render('index', [
             'searchModel' => $searchModel,
@@ -165,6 +176,9 @@ class ReturnController extends Controller
     				$model->goods_price = $r4;//部分反货商品价钱由反货详细信息生成
     				$model->return_all = 2;
     			}
+    			if($model->collection==2){
+    			    $model->goods_price = 0;//不代收，代收款为零
+    			}
 				
     			$model->orderInfo($model);
     			$model->save();
@@ -258,7 +272,7 @@ class ReturnController extends Controller
     			}
                 $orderRemark->addEditRemark(['order_id'=>$model->order_id,'edit_content'=>Yii::$app->request->post('ReturnOrderRemark')['edit_content']]);
     			$tr -> commit();
-    			return $this->redirect(['view', 'id' => $model->order_id,'print'=>1]);
+    			return $this->redirect(['view2', 'id' => $model->order_id,'print'=>1]);
     		} else {
     			return $this->render('create2', [
     					'model' => $model,
@@ -275,6 +289,100 @@ class ReturnController extends Controller
     		    'menus' => $this->_getMenus(),
     		]);
     	}
+    }
+    
+    /**
+     * 追回生成订单
+     * 朱鹏飞
+     * Creates a new LogisticsReturnOrder model.
+     * If creation is successful, the browser will be redirected to the 'view' page.
+     * @return mixed
+     */
+    public function actionCreate3()
+    {
+        try {
+            $model = new LogisticsReturnOrder(['scenario' => 'create']);
+            $modelReturnGoods = new ReturnGoods();
+            $modelReturnOrderTime = new ReturnOrderTime();
+            $modelReturnInfo = new ReturnInfo();
+            $modelLogisticsOrder = new LogisticsOrder();
+            $modelUserBalance = new UserBalance();
+            $orderRemark = new ReturnOrderRemark();
+            if(!empty($modelLogisticsOrder::findOne($_GET['order_id'])->return_logistics_sn)){
+                Yii::$app->getSession()->setFlash('error', '订单已追回!');
+                return $this->redirect(['terminus/over']);
+            }
+            if ($model->load(Yii::$app->request->post())) {
+                $tr = Yii::$app->db->beginTransaction();
+                $model = $model->fillLogisticsInfo($model);//填补物流信息
+                $model->return_type = 3;
+                $r1= $model->save();
+                if(!$r1){
+                    throw new Exception('订单生成失败', '401');
+                }
+                $goodsSn = $model->getReturnGoodsSn('Z');//生成货号
+                 
+                $r2 = $modelReturnGoods->addReturnGoodsInfo($model->order_id, $goodsSn, Yii::$app->request->post()['LogisticsReturnOrder']['goods_num']);//增加商品表
+                 
+                if(!$r2)
+                {
+                    throw new Exception('订单生成失败', '402');
+                }
+                $model->logistics_sn = $model->getReturnLogisticsSn($model->order_id, 'Z');//票号
+                $model->goods_sn =$goodsSn.'_'.$model->goods_num;//货号
+//                 $r4 = $modelReturnInfo->setReturnInfo($model->order_id, Yii::$app->request->post()['ReturnInfo']['name'], Yii::$app->request->post()['ReturnInfo']['number'], Yii::$app->request->post()['ReturnInfo']['price']);
+//                 if($r4 === false)
+//                 {
+//                     throw new Exception('订单生成失败', '404');
+//                 }
+//                 if($r4 >0)
+//                 {
+//                     $model->goods_price = $r4;//部分反货商品价钱由反货详细信息生成
+//                     $model->return_all = 2;
+//                 }
+                if($model->collection==2){
+                    $model->goods_price = 0;//不代收，代收款为零
+                }
+    
+                $model->orderInfo($model);
+                $model->save();
+                $modelReturnOrderTime->order_id=$model->order_id;
+                $modelReturnOrderTime->price_time=time();
+                $r3 = $modelReturnOrderTime->save();//增加订单时间表
+                if(!$r3){
+                    throw new Exception('订单生成失败', '403');
+                }
+                $orderInfo = $modelLogisticsOrder->findOne(['logistics_sn' =>$model->ship_logistics_sn]);
+                $orderInfo->return_logistics_sn = $model->logistics_sn;
+                $orderInfo->save();
+                $advanceOrder = OrderAdvance::findOne(['order_id' => $orderInfo->order_id]);
+                if(!$this->_recoverOrder($orderInfo, $advanceOrder)){
+                    throw new Exception('订单生成失败', '404');
+                }
+//                 $orderRemark->addEditRemark(['order_id'=>$model->order_id,'edit_content'=>Yii::$app->request->post('ReturnOrderRemark')['edit_content']]);
+                $tr -> commit();
+                return $this->redirect(['view', 'id' => $model->order_id,'print'=>1]);
+            } else {
+                if(!empty(Yii::$app->request->get('order_id'))&&$model->isExistOrder(Yii::$app->request->get('order_id'))){
+                    $model = $model->getReplevyCreate(Yii::$app->request->get('order_id'),$model);
+                }else{
+                    $this->goHome();
+                }
+                return $this->render('create3', [
+                        'model' => $model,
+                        'orderRemark' => $orderRemark,
+                        'menus' => $this->_getMenus(),
+                ]);
+            }
+        } catch (Exception $e) {
+            $tr->rollBack();
+            Yii::$app->getSession()->setFlash('error', '订单生成失败,信息不全');
+            return $this->render('create3', [
+                    'model' => $model,
+                    'orderRemark'=> $orderRemark,
+                    'menus' => $this->_getMenus(),
+            ]);
+        }
     }
     
 
@@ -340,6 +448,10 @@ class ReturnController extends Controller
                 ]);
             }
         } else {
+            if($model->return_type==3){
+                Yii::$app->getSession()->setFlash('error', '订单不可修改');
+                return $this->redirect(['index']);
+            }
         	$returnInfo = $modelReturnInfo->findAll(['order_id'=>$id]);
         	return $this->render('update', [
         			'model' => $model,
@@ -381,6 +493,7 @@ class ReturnController extends Controller
     	if ($model->load(Yii::$app->request->post())) {
     		try {
     			$tr = Yii::$app->db->beginTransaction();
+    			$model = $this->getReceivingArea($model);
     			if($model->getOldAttribute('goods_num') != $model->goods_num){//判断修改后的商品数量与原来的数量是否一致
     				$goodsSn = $model->getReturnGoodsSn();
     				$r1 = $modelReturnGoods->isUpdateReturnGoods($model, $goodsSn);//删除旧的
@@ -402,7 +515,7 @@ class ReturnController extends Controller
     			$model->save();
                 $orderRemark->addEditRemark(['order_id'=>$id,'edit_content'=>Yii::$app->request->post('ReturnOrderRemark')['edit_content']]);
     			$tr->commit();
-    			return $this->redirect(['view', 'id' => $model->order_id]);
+    			return $this->redirect(['view2', 'id' => $model->order_id]);
     		} catch (Exception $e) {
     			$tr->rollBack();
     			Yii::$app->getSession()->setFlash('error', $e->getMessage());
@@ -414,6 +527,10 @@ class ReturnController extends Controller
     			]);
     		}
     	} else {
+    	    if($model->return_type==3){
+    	        Yii::$app->getSession()->setFlash('error', '订单不可修改');
+    	        return $this->redirect(['index']);
+    	    }
     		$returnInfo = $modelReturnInfo->findAll(['order_id'=>$id]);
     		return $this->render('update2', [
     				'model' => $model,
@@ -563,6 +680,7 @@ class ReturnController extends Controller
             'index-over' => ['menu' => '/return/index', 'item' => '/return/index-over'],
             'create' => ['menu' => '/return/index', 'item' => false],
             'create2' => ['menu' => '/return/index', 'item' => false],
+            'create3' => ['menu' => '/return/index', 'item' => false],
             'view' => ['menu' => '/return/index', 'item' => false],
             'update' => ['menu' => '/return/index', 'item' => false],
             'update2' => ['menu' => '/return/index', 'item' => false],
@@ -574,6 +692,11 @@ class ReturnController extends Controller
         $model->receiving_provinceid = 6;
         $model->receiving_cityid = 107;
         $model->receiving_areaid = 1531;
+        $userInfo = User::findOne(['username'=>$model->receiving_phone]);
+        if($userInfo){
+            $userInfo->member_areainfo = $model->receiving_name_area;
+            $userInfo->save();
+        }
         return $model;
     }
 
@@ -614,6 +737,192 @@ class ReturnController extends Controller
                 return 0;
         }
     }
+    private function _downloadExcel($dataProvider) {
+        $size = 5000;
+        $count = $dataProvider->query->count();
+        if($count > $size && !Yii::$app->request->get('page')) {
+            $logisticsReturnOrderSearch = new LogisticsReturnOrderSearch();
+            $page = ceil($count/$size);
+            $result = array();
+            for($i=0;$i<$page;$i++) {
+                $temp = array();
+                $begin = $i * $size + 1;
+                $end = ($i+1) * $size > $count ? $count : ($i+1) * $size;
+                $temp['content'] = '（' . $begin. '--' . $end. '）';
+                $temp['url'] = $logisticsReturnOrderSearch->_getObjectUrlParameter('return/index', ['page'=>$i+1]);
+                $result[] = $temp;
+            }
+            return $this->render('order_download', [
+                    'datas' => $result,
+                    'menus' => $this->_getMenus(),
+            ]);
+        }
+    
+        // Create new PHPExcel object
+        $objPHPExcel = new \PHPExcel();
+    
+        // Set document properties
+        $objPHPExcel->getProperties()
+        ->setCreator("wuliu.youjian8.com")
+        ->setLastModifiedBy("wuliu.youjian8.com")
+        ->setTitle("youjian logistics order")
+        ->setSubject("youjian logistics order")
+        ->setDescription("youjian logistics order")
+        ->setKeywords("youjian logistics order")
+        ->setCategory("youjian logistics order");
+        if (yii::$app->request->get('page')) {
+            $dataProvider->query->limit($size)->offset((yii::$app->request->get('page') - 1) * $size);
+        }
+        $datas = $dataProvider->query->all();
+        if ($datas) {
+            $objPHPExcel->setActiveSheetIndex(0)
+            ->setCellValue('A1', '票号')
+            ->setCellValue('B1', '发货票号')
+            ->setCellValue('C1', '运费')
+            ->setCellValue('D1', '代收款')
+            ->setCellValue('E1', '订单类型')
+            ->setCellValue('F1', '订单状态')
+            ->setCellValue('G1', '退货人')
+            ->setCellValue('H1', '退货人电话')
+            ->setCellValue('I1', '收货人')
+            ->setCellValue('J1', '收货人电话')
+            ->setCellValue('K1', '开单时间')
+            ->setCellValue('L1', '开单员')
+            ->setCellValue('M1', '送货人');
+            $i = 2;
+            $count = 0;
+            $amount = 0;
+            $freight = 0;
+            $objPHPExcel->setActiveSheetIndex(0)->getStyle('C')->getNumberFormat()->setFormatCode(\PHPExcel_Style_NumberFormat::FORMAT_TEXT);
+            $objPHPExcel->setActiveSheetIndex(0)->getStyle('D')->getNumberFormat()->setFormatCode(\PHPExcel_Style_NumberFormat::FORMAT_TEXT);
+            foreach ($datas as $model) {
+                // Add some data
+                $objPHPExcel->setActiveSheetIndex(0)->setCellValue('A'.$i, $model->logistics_sn);
+                $objPHPExcel->setActiveSheetIndex(0)->setCellValue('B'.$i, $model->ship_logistics_sn);
+                $objPHPExcel->setActiveSheetIndex(0)->setCellValue('C'.$i, $model->freight);
+                $objPHPExcel->setActiveSheetIndex(0)->setCellValue('D'.$i, $model->goods_price);
+                $objPHPExcel->setActiveSheetIndex(0)->setCellValue('E'.$i, LogisticsOrder::getOrderType($model->order_type));
+                switch ($model->order_state)
+                {
+                    case '10':
+                        $order_state = '已开单';
+                        break;
+                    case '20':
+                        $order_state = '待分拨';
+                        break;
+                    case '30':
+                        $order_state = '待入库';
+                        break;
+                    case '50':
+                        $order_state = '待送货';
+                        break;
+                    case '70':
+                        $order_state = '已收款';
+                        break;
+                    default:
+                        $order_state = '未知';
+                }
+                $objPHPExcel->setActiveSheetIndex(0)->setCellValue('F'.$i, $order_state);
+                $objPHPExcel->setActiveSheetIndex(0)->setCellValue('G'.$i, $model->member_name);
+                $objPHPExcel->setActiveSheetIndex(0)->setCellValue('H'.$i, $model->member_phone);
+                $objPHPExcel->setActiveSheetIndex(0)->setCellValue('I'.$i, $model->receiving_name);
+                $objPHPExcel->setActiveSheetIndex(0)->setCellValue('J'.$i, $model->receiving_phone);
+                $objPHPExcel->setActiveSheetIndex(0)->setCellValue('K'.$i, date('Y-m-d H:i:s',$model->add_time));
+                $userModel = User::findOne($model->employee_id);
+                $objPHPExcel->setActiveSheetIndex(0)->setCellValue('L'.$i, $userModel?$userModel->user_truename:'');
+                $returnMOdel = ReturnOrderRemark::findOne($model->order_id);
+                $objPHPExcel->setActiveSheetIndex(0)->setCellValue('M'.$i, $returnMOdel?$returnMOdel->sender:'');
+                $count += 1;
+                $amount += $model->goods_price;
+                $freight += $model->freight;
+                $i++;
+            }
+            $objPHPExcel->setActiveSheetIndex(0)->setCellValue('A'.$i, '总和：');
+            $objPHPExcel->setActiveSheetIndex(0)->setCellValue('K'.$i, '票数：'.$count);
+            $objPHPExcel->setActiveSheetIndex(0)->setCellValue('L'.$i, '代收款：'.$amount);
+            $objPHPExcel->setActiveSheetIndex(0)->setCellValue('M'.$i, '运费：'.$freight);
+        }
+    
+        // Rename worksheet
+        $objPHPExcel->getActiveSheet()->setTitle('友件-物流发货单');
+    
+    
+        // Set active sheet index to the first sheet, so Excel opens this as the first sheet
+        $objPHPExcel->setActiveSheetIndex(0);
+    
+    
+        // Redirect output to a client’s web browser (Excel5)
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment;filename="友件-物流发货单.xls"');
+        header('Cache-Control: max-age=0');
+        // If you're serving to IE 9, then the following may be needed
+        header('Cache-Control: max-age=1');
+    
+        // If you're serving to IE over SSL, then the following may be needed
+        header ('Expires: Mon, 26 Jul 1997 05:00:00 GMT'); // Date in the past
+        header ('Last-Modified: '.gmdate('D, d M Y H:i:s').' GMT'); // always modified
+        header ('Cache-Control: cache, must-revalidate'); // HTTP/1.1
+        header ('Pragma: public'); // HTTP/1.0
+    
+        $objWriter = \PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5');
+        $objWriter->save('php://output');
+        exit;
+    }
+    private function _recoverOrder($order, $orderAdvance) {
+        if (strpos($order->return_logistics_sn, 'Z') === 0 ) {
+            // 收款 未进余额
+            if($order->goods_price_state == 8) {
+                $order->goods_price_state = $order->goods_price_state | 1;
+                $userBalance = new UserBalance();
+                if (!$userBalance->editUserWithdrawalAmountInfo($order->order_id)) {
+                    return false;
+                }
+                return $order->save();
+            }
+    
+            // 进入余额 未提现
+            if(($order->goods_price_state & 1) && !($order->goods_price_state & 4)) {
+                // 修改提现订单表信息
+                $wOrder = WithdrawalOrder::findOne(['order_sn'=>$order->logistics_sn]);
+                $wOrder->amount = 0;
+                if(!$wOrder->save()) {
+                    return false;
+                }
+    
+                // 原始log记录
+                $log = WithdrawalLog::find()->where(['order_sn'=>$order->logistics_sn])->one();
+    
+                // 添加追回订单log
+                $userBalance = UserBalance::findOne($order->member_id);
+                $log1 = new WithdrawalLog();
+                $log1->uid = $order->member_id;
+                $log1->amount = $log->amount;
+                $log1->before_amount = $userBalance->withdrawal_amount;
+                $log1->after_amount = $userBalance->withdrawal_amount - $log->amount;
+                $log1->content = '追回订单扣除';
+                $log1->type = 4;
+                $log1->order_sn = '-'.$order->logistics_sn;
+                $log1->add_time = time();
+                if(!$log1->save()) {
+                    return false;
+                }
+                // 扣除余额
+                $userBalance->withdrawal_amount -= $log->amount;
+                if(!$userBalance->save()) {
+                    throw new Exception('减可提现余额失败！');
+                }
+                return true;
+            }
+    
+            // 用户已经提现
+            if($order->goods_price_state & 4) {
+                $orderAdvance->recover_state = 1;
+                return $orderAdvance->save();
+            }
+        }
+        return true;
+    }
+    
 
 
 }

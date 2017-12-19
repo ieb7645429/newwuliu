@@ -48,6 +48,7 @@ $this->params['leftmenus'] = $menus;
                  <th>物流路线</th>
                  <th>收货地址</th>
                  <th>封车时间</th>
+                 <th class="thCenter">追回</th>
                  <th class="thCenter">操作</th>
               </tr>
            </thead>
@@ -63,6 +64,11 @@ $this->params['leftmenus'] = $menus;
              <td><?php echo $value['routeInfo']['logistics_route_name']; ?></td>
              <td><?php echo $value['receiving_name_area']; ?></td>
               <td><?php echo date("Y-m-d H:i:s",$value['orderTime']['ruck_time']); ?></td>
+             <td>
+                 <?php if($value['replevyButton']==1){?>
+                     <a href="?r=return/create3&order_id=<?php echo $value['order_id']?>"  data-confirm="是否追回订单<?=$value['logistics_sn']?>"><span class="lose" data-order-id="<?php echo $value['order_id']?>">追回</span></a>
+                 <?php }?>
+             </td>
              <td>
                  <span class="finish" data-order-id="<?php echo $value['order_id']?>">已完成</span>
              </td>

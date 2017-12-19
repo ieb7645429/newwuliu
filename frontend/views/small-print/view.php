@@ -21,19 +21,25 @@ $this->params['leftmenus'] = $menus;
 	<tr>
 		<th>票号</th>
 		<th>修理厂</th>
+		<th>件数</th>
 		<th>代收款</th>
 		<th>运费</th>
 	</tr>
 	<?php
+	   $all_goods_num = 0;
 	   $all_amount = 0;
 	   $all_freight = 0;
 	   foreach($model->data as $key => $value){
+       if(!empty($value->goods_num)){
+           $all_goods_num += $value->goods_num;
+       }
        $all_amount += $value->goods_price;
        $all_freight += $value->freight + $value->make_from_price - $value->shipping_sale;
     ?>
 	<tr>
 		<td><?=$value->logistics_sn?></td>
 		<td><?=$value->receiving_name?></td>
+		<td><?=empty($value->goods_num)?'':$value->goods_num?></td>
 		<td><?=$value->goods_price?></td>
 		<td><?=$value->freight + $value->make_from_price?></td>
 	</tr>
@@ -41,6 +47,7 @@ $this->params['leftmenus'] = $menus;
 	<tr>
 		<td><?=count($model->data)?></td>
 		<td></td>
+		<td><?=$all_goods_num==0?'':$all_goods_num?></td>
 		<td><?=$all_amount?></td>
 		<td><?=$all_freight?></td>
 	</tr>

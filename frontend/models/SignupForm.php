@@ -27,6 +27,7 @@ use common\models\User;
 */
 class SignupForm extends Model
 {
+    public $id;
     public $username;
     public $email;
     public $password;
@@ -58,7 +59,9 @@ class SignupForm extends Model
     public function rules()
     {
         return [
-            [['username','password','member_phone','user_truename', 'member_provinceid', 'member_cityid', 'member_areaid'],'required'],
+            [
+//            [['id'], 'integer'],
+            ['username','password','member_phone','user_truename', 'member_provinceid', 'member_cityid', 'member_areaid'],'required'],
             ['username', 'trim'],
             ['username', 'unique', 'targetClass' => '\common\models\User', 'message' => '用户名已经存在。'],
             ['username', 'string', 'min' => 2, 'max' => 255],
@@ -98,7 +101,7 @@ class SignupForm extends Model
         $user->member_areaid = $this->member_areaid;
         $user->member_cityid = $this->member_cityid;
         $user->member_provinceid = $this->member_provinceid;
-        $user->member_areainfo = $this->member_areainfo;
+        $user->member_areainfo = isset($this->member_areainfo) ? $this->member_areainfo : 0;
         $user->generateAuthKey();
         return $user->save() ? $user : null;
     }

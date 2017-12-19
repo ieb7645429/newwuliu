@@ -4,14 +4,14 @@ use yii\helpers\Html;
 use yii\bootstrap\ActiveForm;
 use kartik\daterange\DateRangePicker;
 use yii\widgets\LinkPager;
-use frontend\assets\DriverManagerAsset;
-DriverManagerAsset::register($this);
+use frontend\assets\DriverManagerAbnormalAsset;
+DriverManagerAbnormalAsset::register($this);
 
 $this->title = '封车';
 $this->params['breadcrumbs'][] = $this->title;
 $this->params['leftmenus'] = $menus;
 ?>
-<?php $form = ActiveForm::begin(['method'=>'get'])?>
+<?php $form = ActiveForm::begin(['action'=>['driver-manager/abnormal'],'method'=>'get'])?>
     <?= $form->field($LogisticsOrder, 'logistics_sn',['labelOptions' => ['label' => Yii::$app->params['logistics_sn']]])->textInput(['value' => $params['logistics_sn']]) ?>
     <?= $form->field($goods, 'goods_sn',['labelOptions' => ['label' => Yii::$app->params['goods_sn']]])->textInput(['value' => $params['goods_sn']]) ?>
     <?= $form->field($LogisticsOrder, 'add_time')->label('开单时间')->widget(DateRangePicker::classname(), [
@@ -30,13 +30,18 @@ $this->params['leftmenus'] = $menus;
    ])?>
     <?php echo Html::submitButton('搜索', ['class'=>'btn btn-primary','name' =>'submit-button']) ?>
 <?php ActiveForm::end()?>
+<?= LinkPager::widget(['pagination' => $pages]); ?>
 <div class="body-content">
+<input type="hidden" id="rule" value=<?= $rule?> >
     </div>
 <?php if(!empty($orderList)){?>
     <table class="table tableTop">
        
        <tbody>
        <thead>
+        <tr class="row">
+            <div > 当前已选中<strong id="count"><?=count($orderList);?></strong>项</div>
+        </tr>
               <tr class="tableBg">
                  <th><?=Yii::$app->params['logistics_sn']?></th>
                  <th>订单类型</th>
@@ -46,6 +51,7 @@ $this->params['leftmenus'] = $menus;
                  <th>物流路线</th>
                  <th>收货地址</th>
                  <th>封车时间</th>
+                 <th>操作</th>
               </tr>
            </thead>
        <?php 
@@ -61,6 +67,9 @@ $this->params['leftmenus'] = $menus;
              <td><?php echo $value['routeInfo']['logistics_route_name']; ?></td>
              <td><?php echo $value['receiving_name_area']; ?></td>
              <td><?php echo empty($value['orderTime']['ruck_time'])?'':date("Y-m-d H:i:s",$value['orderTime']['ruck_time']); ?></td>
+             <td>
+                 <span class="operation" data-order-id=<?php echo $value['order_id']?>>恢复</span>
+             </td>
           </tr>
              <?php if(!empty($value['goodsInfo'])){?>
           <tr>

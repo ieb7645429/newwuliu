@@ -36,12 +36,16 @@ $this->params['leftmenus'] = $menus;
     <?php echo Html::button('落地打印', ['class'=>'btn btn-primary js-print']) ?>
 <?php ActiveForm::end()?>
 <input type="hidden" id="driver_id" value="<?php echo $driver_id?>">
+<input type="hidden" id="count_js" value="<?=$count;?>">
 <?= LinkPager::widget(['pagination' => $pages]); ?>
 <?php if(!empty($orderList)){?>
     <table class="table tableTop">
        
        <tbody>
        <thead>
+       <tr class="row">
+              <div > 当前已选中<strong id="count"><?=$count;?></strong>项</div>
+          </tr>
               <tr class="tableBg">
               <th width="80px"><?= Html::checkbox('all',true,['style'=>'margin-right:5px','id'=>'check_all']);?>全选</th>
                  <th><?=Yii::$app->params['logistics_sn']?></th>
@@ -58,7 +62,7 @@ $this->params['leftmenus'] = $menus;
         ?>
             
           <tr class="info">
-          <td><?= Html::checkbox('print',true,['class'=>'order_check checkbox'.$value['order_id'],'value' => $value['order_id']]);?></td>
+          <td><?= Html::checkbox('print',in_array($value['order_id'],$order_arr)||!isset($_GET['page'])?true:false,['class'=>'order_check checkbox'.$value['order_id'],'value' => $value['order_id']]);?></td>
              <td>
              <?= Html::a($value['logistics_sn'], Url::to(['employee/view','id'=>$value['order_id']]),['target' => '_blank']) ?>
              </td>

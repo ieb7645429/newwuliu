@@ -83,6 +83,12 @@ class WithdrawalOrderSearch extends WithdrawalOrder
     
         $dataProvider = new ActiveDataProvider([
                 'query' => $query,
+//                 'pagination' => ['pageSize' => 2],
+                'sort' => [
+                        'defaultOrder' => [
+                                'add_time' => SORT_DESC,
+                        ]
+                ],
         ]);
     
         $this->load($params);
@@ -118,7 +124,8 @@ class WithdrawalOrderSearch extends WithdrawalOrder
                 'desc' =>['logistics_order.order_sn'=>SORT_DESC],
         ];
     
-        $query->andFilterWhere(['like', 'order_sn', $this->order_sn]);
+        $query->andFilterWhere(['like', 'withdrawal_order.order_sn', $this->order_sn]);
+        $query->andFilterWhere(['<>', 'amount', 0]);
     
         return $dataProvider;
     }

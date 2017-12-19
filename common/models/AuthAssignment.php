@@ -50,6 +50,54 @@ class AuthAssignment extends \yii\db\ActiveRecord
     }
 
     /**
+     * @Author:Fenghuan
+     * @param $id
+     * @return mixed
+     */
+    public function findModel($id)
+    {
+        if (($model = self::findOne($id)) !== null) {
+            return $model;
+        } else {
+            return;
+        }
+    }
+
+    /**
+     * 查询多条记录
+     * @Author:Fenghuan
+     * @param $condition
+     * @param $fields
+     * @return array|\yii\db\ActiveRecord[]
+     */
+    public function selectItems($condition, $fields)
+    {
+        return self::find()->innerJoin('user_all', 'auth_assignment.user_id = user_all.id')->select($fields)->where($condition)->asArray()->all();
+    }
+
+    /**
+     * @Author:Fenghuan
+     * @param $condition
+     * @return static
+     */
+    public function getOneItem($condition)
+    {
+        return self::findOne($condition);
+    }
+
+    /**
+     * 更新一条记录
+     * @Author:Fenghuan
+     * @param $data
+     * @param $condition
+     * @return int
+     */
+    public function updateItem($data,$condition)
+    {
+        return self::updateAll($data,$condition);
+    }
+
+    /**
      * @return \yii\db\ActiveQuery
      */
     public function getItemName()

@@ -13,7 +13,7 @@ use common\models\LogisticsOrderDelete;
 class LogisticsOrderDeleteSearch extends LogisticsOrderDelete
 {
     public function attributes(){
-        return array_merge(parent::attributes(),['receivingCityName','memberCityName','userName','trueName','deleteName']);
+        return array_merge(parent::attributes(),['receivingCityName','memberCityName','userName','trueName','deleteName','delContent']);
     }
     /**
      * @inheritdoc

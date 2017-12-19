@@ -2,6 +2,8 @@
 
 namespace frontend\controllers;
 
+use common\models\CreateMemberLog;
+use common\models\CreateStateLog;
 use Yii;
 use common\models\Area;
 use common\models\AuthAssignment;
@@ -22,6 +24,11 @@ use common\models\WithdrawalOrder;
 use common\models\UserBalance;
 use common\models\OrderThirdAdvance;
 use common\models\LogisticsReturnOrder;
+use common\models\OrderAdvance;
+use backend\models\TellerLog;
+use backend\models\TellerIncomeSnLog;
+use common\models\ReturnOrderTime;
+use common\models\OrderTime;
 
 class CreateUserController extends \yii\web\Controller
 {
@@ -37,6 +44,7 @@ class CreateUserController extends \yii\web\Controller
     }
     
     public function actionCreate() {
+
         $model = new CreateUserForm();
         $area = new Area();
         $auth = new AuthAssignment();
@@ -84,6 +92,8 @@ class CreateUserController extends \yii\web\Controller
             'menus' => $this->_getMenus()
         ]);
     }
+
+
     
     public function actionUserList(){
         $searchModel = new UserSearch();
@@ -120,7 +130,7 @@ class CreateUserController extends \yii\web\Controller
                     Yii::$app->getSession()->setFlash('error', '会员号必须为手机号!');
                     return $this->redirect(['update','id'=>$id]);
                 }
-                
+
                 if($model->username!=$user_post['username']){//判断会员号是否需要修改
                     if(empty($user_post['username'])){
                         Yii::$app->getSession()->setFlash('error', '会员号不能为空!');
@@ -170,7 +180,13 @@ class CreateUserController extends \yii\web\Controller
                     return $this->redirect(['update','id'=>$id]);
                 }
             
-            
+                if(!empty(Yii::$app->request->post('BankInfo'))){
+					$bankInfoParam = Yii::$app->request->post('BankInfo');
+					if($bankInfo->issetBankInfoCardNo($bankInfoParam['bank_info_id'],$bankInfoParam['bank_info_card_no'])){
+					   Yii::$app->getSession()->setFlash('error', '银行卡号已存在!');
+					   return $this->redirect(['update','id'=>$id]);
+					}                	
+                }            
                 if(!empty(Yii::$app->request->post('BankInfo'))){
                     $post_bank = Yii::$app->request->post('BankInfo');
                     $bank->bank_info_card_no = $post_bank['bank_info_card_no'];
@@ -201,7 +217,8 @@ class CreateUserController extends \yii\web\Controller
             ]);
         }
     }
-    
+
+
     public function actionOrderMemberUpdate() {
         $model = new LogisticsOrder();
         if (Yii::$app->request->isPost) {
@@ -213,6 +230,48 @@ class CreateUserController extends \yii\web\Controller
                     throw new Exception('参数错误！');
                 }
                 $order = $model::findOne(['logistics_sn'=>Yii::$app->request->post('LogisticsOrder')]);
+
+
+
+ /*
+* 0.0
+* 条件查询得到转订单修改前的信息old_member_id、old_order_state、old_state、old_goods_price_state、值的状态
+* */
+
+                header("Content-Type:text/html;charset=utf8");
+                $memberId = LogisticsOrder::find()->select('member_id')
+                    ->where(['member_id' =>$order['member_id']])
+                    ->asArray()
+                    ->one();
+//                var_dump($memberId['member_id']);die;
+                $state = LogisticsOrder::find()->select('state')
+                    ->where(['state' =>$order['state']])
+                    ->asArray()
+                    ->one();
+//                var_dump($state['state']);die;
+                $orderState = LogisticsOrder::find()->select('order_state')
+                    ->where(['order_state' =>$order['order_state']])
+                    ->asArray()
+                    ->one();
+//                var_dump($orderState['order_state']);die;
+                $goodsPriceState = LogisticsOrder::find()->select('goods_price_state')
+                    ->where(['goods_price_state' =>$order['goods_price_state']])
+                    ->asArray()
+                    ->one();
+//                var_dump($goodsPriceState['goods_price_state']);die;
+
+/*
+* 0.0
+* 条件查询结束
+* */
+
+
+
+                if(strpos($order->return_logistics_sn, 'Z') === 0)
+                {
+                    throw new Exception('追回订单不可改状态！');
+                }
+
                 $userModel = new User();
                 $user = $userModel->getMemberInfo(['or', ['username'=>$member_phone], ['small_num'=>$member_phone]]);
                 if (!$order || !$user) {
@@ -237,8 +296,9 @@ class CreateUserController extends \yii\web\Controller
                 if(!$order->save()) {
                     throw new Exception('订单信息修改失败！');
                 }
-                
-            
+
+
+
                 
                 // 已进入用户可提现金额
                 if ($order->goods_price_state & 1) {
@@ -272,6 +332,8 @@ class CreateUserController extends \yii\web\Controller
                     if(!$log1->save()) {
                         throw new Exception('添加转订单log失败！');
                     }
+
+
                     // 扣除余额
                     $userBalance1->withdrawal_amount -= $log->amount;
                     if(!$userBalance1->save()) {
@@ -298,7 +360,40 @@ class CreateUserController extends \yii\web\Controller
                         throw new Exception('加可提现余额失败！');
                     }
                 }
-                
+
+
+                /*
+                 * 0.0
+                 * 添加 将转订单修改后的信息 保存到 create_member_log
+                 * */
+                $createMemberLog = new CreateMemberLog();
+//                    var_dump($createMemberLog);die;
+                $createMemberLog->logistics_sn = $logistics_sn;
+                $createMemberLog->member_phone = $member_phone;
+//                $createMemberLog->old_member_id = $order->getOldAttribute('member_id')/*$oldId*/;
+                $createMemberLog->old_member_id = $memberId['member_id']/*$oldId*/;
+                $createMemberLog->new_member_id = $order->member_id;
+//                $createMemberLog->old_order_state = $order->getOldAttribute('order_state');
+                $createMemberLog->old_order_state = $orderState['order_state'];
+                $createMemberLog->new_order_state = $order->order_state;
+//                $createMemberLog->old_state = $order->getOldAttribute('state');
+                $createMemberLog->old_state = $state['state'];
+                $createMemberLog->new_state = $order->state;
+//                $createMemberLog->old_goods_price_state = $order->getOldAttribute('goods_price_state');
+                $createMemberLog->old_goods_price_state = $goodsPriceState['goods_price_state'];
+                $createMemberLog->new_goods_price_state = $order->goods_price_state;
+//                $createMemberLog->user_id = Yii::$app->user->id;
+                $createMemberLog->user_id = $_SESSION['__id'];
+//                    var_dump($createMemberLog);die;
+                if (!$createMemberLog->save()){
+                    throw new Exception('转订单信息log保存失败！');
+                }
+
+/*
+* 0.0
+* 添加结束
+*/
+
                 $tr->commit();
                 Yii::$app->getSession()->setFlash('success', '修改成功！');
                 return $this->redirect(['order-member-update']);
@@ -334,11 +429,50 @@ class CreateUserController extends \yii\web\Controller
                     throw new Exception('参数错误！');
                 }
                 $order = $model::findOne(['logistics_sn'=>Yii::$app->request->post('LogisticsOrder')]);
+
+//                header("Content-Type:text/html;charset=utf8");
+//                var_dump($order);die;
+
+/*
+ * 0.0
+ * 条件查询得到状态修改前的old_order_state、old_state、old_goods_price_state、值的状态
+ * */
+
+
+                header("Content-Type:text/html;charset=utf8");
+                $state = LogisticsOrder::find()->select('state')
+                    ->where(['state' =>$order['state']])
+                    ->asArray()
+                    ->one();
+//                var_dump($state['state']);die;
+                $orderState = LogisticsOrder::find()->select('order_state')
+                    ->where(['order_state' =>$order['order_state']])
+                    ->asArray()
+                    ->one();
+//                var_dump($orderState['order_state']);die;
+                $goodsPriceState = LogisticsOrder::find()->select('goods_price_state')
+                    ->where(['goods_price_state' =>$order['goods_price_state']])
+                    ->asArray()
+                    ->one();
+//                var_dump($goodsPriceState['goods_price_state']);die;
+
+/*
+ * 0.0
+ * 条件查询结束
+ * */
+
+
+                
+                if(strpos($order->return_logistics_sn, 'Z') === 0)
+                {
+                    throw new Exception('追回订单不可改状态！');
+                }
+
                 if($order->order_state != 70 && $order->state != 6)
                 {
                     throw new Exception('订单未完成！');
                 }
-                if (!in_array($order ->goods_price_state, array(2,8))){
+                if (!in_array($order ->goods_price_state, array(2,8,9,1))){
                     throw new Exception('订单已收款！');
                 }
                 $order->state = 2;
@@ -347,25 +481,118 @@ class CreateUserController extends \yii\web\Controller
                     $order ->goods_price_state = 2;
                     
                 }
+                //订单时间修改
+                $orderTime = OrderTime::findOne($order->order_id);
+                if(!empty($orderTime))
+                {
+                    $orderTime->collection_time=0;
+                    $orderTime->income_freight_time=0;
+                    $orderTime->pay_freight_time=0;
+                    $orderTime->income_price_time=0;
+                    $orderTime->pay_price_time=0;
+                    $orderTime->save();
+                }
+                //退货订单，退货订单时间删除
                 if($order->return_logistics_sn)
                 {
                     $reData = LogisticsReturnOrder::find()->where(['logistics_sn'=>$order->return_logistics_sn])->one();
                     $reData->delete();
+                    $reOrdertime = ReturnOrderTime::findOne($reData->order_id);
+                    $reOrdertime->delete();
                     $order->return_logistics_sn = '';
+                }
+                $order ->freight_state = 2;
+                if($order ->goods_price_state == 9 || $order ->goods_price_state == 1)
+                {
+                    $order ->goods_price_state = 2;
+                    $wLog = new WithdrawalLog();
+                    $wLogData = $wLog->find()->where(['order_sn'=>$order->logistics_sn, 'uid'=>$order->member_id])->one();//查进入可提现对应订单的log记录
+                    if(empty($wLog))
+                    {
+                        throw new Exception('订单异常,请联系技术1！');
+                    }
+                    $wLogData->order_sn = '+'.$order->logistics_sn;
+                    $res3 = $wLogData->save();//修改这个记录的订单编号
+                    $lastWLogData = $wLog->find()->where(['uid'=>$order->member_id])->orderBy('id desc')->one();//查此用户最后一条log
+                    $newWLog = new WithdrawalLog();
+                    $newWLog->uid = $order->member_id;
+                    $newWLog->amount= $wLogData->amount;
+                    $newWLog->before_amount= $lastWLogData->after_amount;
+                    $newWLog->after_amount= $lastWLogData->after_amount - $wLogData->amount;
+                    $newWLog->content = '系统调整，对余额无影响';
+                    $newWLog->type = 3;
+                    $newWLog->order_sn= '-'.$order->logistics_sn;
+                    $newWLog->add_time= time();
+                    $res1 = $newWLog -> save();//新加一条减钱的log
+                    $userBD = UserBalance::find()->where(['user_id'=>$order->member_id])->one();
+                    $userBD->withdrawal_amount -= $wLogData->amount;
+                    $res2 = $userBD->save();//用户可提现余额减去这个订单的钱
+                    OrderAdvance::deleteAll(['logistics_sn'=>$order->logistics_sn]);
+                    if(!$res1 || !$res2 || !$res3)
+                    {
+                        throw new Exception('订单异常,请联系技术2！');
+                    }
                 }
                 $datas = OrderThirdAdvance::find()->where(['order_id'=>$order->order_id])->one();
                 if($datas)
                 {
-                    $res = $datas->delete();
-                    if(!$res)
+                    $datas->$datas=1;
+                    if(!$datas->save())
                     {
                         throw new Exception('订单异常！');
                     }
                 }
+                $WOdDatas = WithdrawalOrder::find()->where(['order_sn'=>$order->logistics_sn])->one();
+                if($WOdDatas)
+                {
+                    if($WOdDatas->user_id != $order->member_id)
+                    {
+                        throw new Exception('订单异常，请联系技术5！');
+                    }
+                    $res5 = $WOdDatas->delete();
+                    if(!$res5)
+                    {
+                        throw new Exception('订单异常！');
+                    }
+                }
+                $TLDatas = TellerLog::find()->where(['order_id'=>$order->order_id])->one();
+                if($TLDatas)
+                {
+                    if(!$TLDatas->delete())
+                    {
+                        throw new Exception('订单异常，请联系技术7！');
+                    }
+                }
+                TellerIncomeSnLog::deleteAll(['order_id'=>$order->order_id]);
                 if(!$order->save())
                 {
                     throw new Exception('修改失败！');
                 }
+
+/*
+ * 0.0
+ * 添加 将修改订单状态后的信息 保存到 create_state_log
+ * */
+                $CreateStateLog = new CreateStateLog();
+                $CreateStateLog->old_order_state =$orderState['order_state'];
+                $CreateStateLog->new_order_state = $order->order_state;
+                $CreateStateLog->old_state = $state['state'];
+                $CreateStateLog->new_state = $order->state;
+                $CreateStateLog->old_goods_price_state = $goodsPriceState['goods_price_state'];
+                $CreateStateLog->new_goods_price_state = $order->goods_price_state;
+                $CreateStateLog->add_time = time();
+//              $createMemberLog->user_id = Yii::$app->user->id;
+                $CreateStateLog->user_id = $_SESSION['__id'];
+//              var_dump(Yii::$app->getSession());die;
+                if (!$CreateStateLog->save()){
+                    throw new Exception('修改订单状态log保存失败！');
+                }
+
+/*
+* 0.0
+* 添加结束
+*/
+
                 $tr->commit();
                 Yii::$app->getSession()->setFlash('success', '修改成功！');
                 return $this->redirect(['update-order-state']);
@@ -453,5 +680,33 @@ class CreateUserController extends \yii\web\Controller
         }
         return true;
     }
-
+ /**
+ *  清空银行卡信息
+ *  2017-11-23
+ *  xiaoyu
+ **/
+  public function actionUnbind($id)
+    {
+	    if(empty($id)){
+		    Yii::$app->getSession()->setFlash('error', '参数错误');
+            return $this->redirect(['user-list','id'=>$id]);
+		}
+        $bankInfo = new BankInfo();
+        $bank = $bankInfo::findOne(['user_id'=>$id]);
+        try {
+           // $bank->bank_info_card_no = '';
+			//$bank->bank_info_account_name = '';
+			//$bank->bank_info_bank_name = '';
+			//$bank->bank_info_bank_address = '';
+			//$bank->bank_info_place = '';//不允许相同都为空
+            //$bank->save();
+			$bank->delete();
+			Yii::$app->getSession()->setFlash('success', '银行卡解绑成功!');
+            return $this->redirect(['user-list','id'=>$id]);
+            }catch(Exception $e){
+            Yii::$app->getSession()->setFlash('error', '银行卡解绑失败');
+            return $this->redirect(['user-list','id'=>$id]);
+            }
+       
+    }
 }

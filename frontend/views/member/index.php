@@ -40,7 +40,7 @@ $this->params['leftmenus'] = $menus;
     <p>
     <?= Html::submitButton('查询', ['class' => 'btn btn-primary']) ?>
         <?= Html::a('发货', ['create-order'], ['class' => 'btn btn-success']) ?>
-       <?php echo Html::button('打印', ['class'=>'btn btn-primary js-loading-print']) ?>
+      <!--   <?php echo Html::button('打印', ['class'=>'btn btn-primary js-loading-print']) ?>-->
 		<span style="display: block;width:260px;color:red;float:right;">以下情况不赔付:玻璃和外包装无破损货物</span>
     </p>
 	 <?php ActiveForm::end(); ?>

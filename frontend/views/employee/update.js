@@ -606,7 +606,7 @@ function SearchMemberName(Name){
             })
 }
 //提交表单
-$('#submitButton').click(function(){
+$('#submitButton,#submitButton2').click(function(){
 	$(this).attr('disabled','disabled');
 	if(!confirm("是否确定收货？")){
 		$(this).attr('disabled',false);

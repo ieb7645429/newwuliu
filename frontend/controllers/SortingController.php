@@ -3,6 +3,7 @@
 namespace frontend\controllers;
 
 use Yii;
+use yii\helpers\ArrayHelper;
 use yii\web\Controller;
 use common\models\LogisticsReturnOrder;
 use common\models\ReturnGoods;
@@ -43,6 +44,8 @@ class SortingController extends \yii\web\Controller
                         'count' => $count,
                         'city_id' => Yii::$app->request->get('LogisticsReturnOrder')['member_cityid'],
                         'menus' => $this->_getMenus(),
+                        'check_count' => $this->_CookieClear($return->returnList($params,$where),'obj'),
+                        'order_arr' => $this->_GetOrderArr(),
                 ]
                 );
     }
@@ -78,6 +81,8 @@ class SortingController extends \yii\web\Controller
                         'count' => $count,
                         'city_id' => Yii::$app->request->get('LogisticsReturnOrder')['member_cityid'],
                         'menus' => $this->_getMenus(),
+                        'check_count' => $this->_CookieClear($return->returnList($params,$where),'obj'),
+                        'order_arr' => $this->_GetOrderArr(),
                 ]);
     }
     
@@ -122,11 +127,15 @@ class SortingController extends \yii\web\Controller
     public function actionOrderEdit(){
         $return = new LogisticsReturnOrder();
         $tr = Yii::$app->db->beginTransaction();
+        $cookies = Yii::$app->request->cookies->get('checkbox');
+        $order_arr = explode('-',$cookies);
         try{
-            $res = $return->ajaxReturnOrderEdit(Yii::$app->request->post('order_arr'),Yii::$app->request->post('order_state'));
-            if($res===false){
+            $res = $return->ajaxReturnOrderEdit($order_arr,Yii::$app->request->post('order_state'));
+            if($res===false||empty($order_arr)){
                 throw new Exception('处理失败', '1');
             }
+            $checkbox = Yii::$app->request->cookies->get('checkbox');
+            Yii::$app->response->cookies->remove($checkbox);
             $result = ['error'=>0,'message'=>'处理成功'];
             $tr -> commit();
         }catch(Exception $e){
@@ -180,10 +189,15 @@ class SortingController extends \yii\web\Controller
      */
     public function actionGoodsBatchEdit(){
         $model = new LogisticsReturnOrder();
-        if($model->batchGoodsEdit(10,Yii::$app->request->post('order_arr'))){
+        $cookies = Yii::$app->request->cookies->get('checkbox');
+        $order_arr = explode('-',$cookies);
+        if($model->batchGoodsEdit(10,$order_arr)&&!empty($order_arr)){
+//             $checkbox = Yii::$app->request->cookies->get('checkbox');
+//             Yii::$app->response->cookies->remove($checkbox);
             $result = [
                     'code'=>200,
                     'message'=>'处理成功',
+                    'data'=>$order_arr,
             ];
         }else{
             $result = [
@@ -284,5 +298,52 @@ class SortingController extends \yii\web\Controller
         $goods = new ReturnGoods();
         $goodsList = $goods->find()->where(['order_id'=>$order_id])->asArray()->all();
         return $goodsList;
+    }
+    /**
+     * 清除cookie
+     * @param unknown $data
+     * @param string $type  arr数组  obj对象 none默认不选中
+     */
+    private function _CookieClear($data,$type = 'obj'){
+        $cookies = Yii::$app->request->cookies;
+        $count = 0;
+        if(empty(Yii::$app->request->queryParams['page'])){
+                //删除cookie
+                if(isset($cookies['checkbox'])){
+                    $checkbox = $cookies->get('checkbox');
+                    Yii::$app->response->cookies->remove($checkbox);
+                }
+                //默认不选中
+                if($type=='none'){
+                    return $count;
+                }
+                //默认cookie全部选中
+                if($type=='arr'){
+                    $order_arr = ArrayHelper::getColumn($data,'order_id');
+                }else if($type=='obj'){
+                    $order_arr = ArrayHelper::getColumn($data->asArray()->all(),'order_id');
+                }
+                $order_str = implode('-',$order_arr);
+                //添加新cookie
+                Yii::$app->response->cookies->add(new \yii\web\Cookie([
+                        'name' => 'checkbox',
+                        'value' => $order_str,
+                    ])
+                );
+                $count = count($order_arr);
+        }else{
+            if(isset($cookies['checkbox'])){
+                $count = count(explode('-',$cookies->get('checkbox')));
+            }
+        }
+        return  $count;
+    }
+    //获取cookie
+    private function _GetOrderArr(){
+        $cookies = Yii::$app->request->cookies;
+        if(isset($cookies['checkbox'])){
+            return explode('-',$cookies->get('checkbox'));
+        }
+        return array();
     }
 }

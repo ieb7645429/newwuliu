@@ -11,7 +11,7 @@ $this->title = '封车';
 $this->params['breadcrumbs'][] = $this->title;
 $this->params['leftmenus'] = $menus;
 ?>
-<?php $form = ActiveForm::begin(['method'=>'get'])?>
+<?php $form = ActiveForm::begin(['action'=>['driver-manager/not-enclosed'],'method'=>'get'])?>
    <?= $form->field($LogisticsOrder, 'logistics_sn',['labelOptions' => ['label' => Yii::$app->params['logistics_sn']]])->textInput(['value' => $params['logistics_sn']]) ?>
    <?= $form->field($goods, 'goods_sn',['labelOptions' => ['label' => Yii::$app->params['goods_sn']]])->textInput(['value' => $params['goods_sn']]) ?>
    <?= $form->field($LogisticsOrder, 'add_time')->label('开单时间')->widget(DateRangePicker::classname(), [
@@ -31,15 +31,17 @@ $this->params['leftmenus'] = $menus;
     <?php echo Html::submitButton('搜索', ['class'=>'btn btn-primary','name' =>'submit-button']) ?>
     <?php //echo Html::button('封车打印', ['class'=>'btn btn-primary js-loading-print']) ?>
 <?php ActiveForm::end()?>
+<?= LinkPager::widget(['pagination' => $pages]); ?>
 <div class="body-content">
+<input type="hidden" id="rule" value=<?= $rule?> >
     </div>
 <?php if(!empty($orderList)){?>
     <table class="table tableTop">
-       
        <tbody>
        <thead>
+        
               <tr class="tableBg">
-              <th width="80px"><?= Html::checkbox('all',true,['style'=>'margin-right:5px','id'=>'check_all']);?>全选</th>
+              
                  <th><?=Yii::$app->params['logistics_sn']?></th>
                  <th>订单类型</th>
                  <th>代收款</th>
@@ -56,7 +58,7 @@ $this->params['leftmenus'] = $menus;
         ?>
             
           <tr class="info">
-          <td><?= Html::checkbox('print',true,['class'=>'order_check checkbox'.$value['order_id'],'value' => $value['order_id']]);?></td>
+          
              <td><?php echo $value['logistics_sn']; ?></td>
               <td><?php if($value['order_type']==1) echo '西部';if($value['order_type']==3) echo '瑞胜'; ?></td>
              <td><?php echo $value['goods_price']; ?></td>

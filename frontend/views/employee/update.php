@@ -29,6 +29,8 @@ $this->params['leftmenus'] = $menus;
         'areaName' => $areaName,
         'disabled'=>true,
         'orderRemark'=>$orderRemark,
+        'parts' => $parts,
+        'orderParts'=> $orderParts
     ]) ?>
 <?= Html::input('hidden', null, Url::toRoute(['member/receiving']), ['id' => 'receivingUrl'])?>
     <?= Html::input('hidden', null, Url::toRoute(['employee/member-info']), ['id' => 'memberInfoUrl'])?>

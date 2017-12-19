@@ -17,6 +17,8 @@ use common\models\BuyOut;
 use common\models\GoodsInfo;
 use common\models\Area;
 use common\models\User;
+use common\models\Parts;
+use common\models\OrderParts;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
@@ -33,6 +35,7 @@ use common\models\OrderPriceEditLog;
 use backend\models\OrderRemark;
 use common\models\LogisticsLines;
 use common\models\DateNum;
+use common\yjmodels\Order;
 
 /**
  * LogisticsOrderController implements the CRUD actions for LogisticsOrder model.
@@ -64,27 +67,28 @@ class EmployeeController extends Controller
         $statisticalOrder = new StatisticalOrder();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
         //统计代码
-        if(empty(Yii::$app->request->queryParams['LogisticsOrderSearch'])){//无搜索条件
-            $count = $statisticalOrder->getEmployeeCount();
-        }else{//有搜索条件
-            $countModel = $searchModel->search(Yii::$app->request->queryParams);
-            $count['order_num'] = $searchModel->getEmployeeOrderNum($countModel);
-            $count['goods_num'] = $searchModel->getEmployeeGoodsNum($countModel);
-            $count['price'] = $searchModel->getEmployeePrice($countModel);
-            $count['price_count'] = $searchModel->getEmployeePriceCount($searchModel->search(Yii::$app->request->queryParams));
-            $count['same_city_order'] = $searchModel->getEmployeeSameCityOrder($countModel);
-            $count['same_city_goods'] = $searchModel->getEmployeeSameCityGoods($countModel);
-            $count['same_city_price'] = $searchModel->getEmployeeSameCityPrice($countModel);
-            $count['same_city_price_count'] = $searchModel->getEmployeeSameCityPriceCount($searchModel->search(Yii::$app->request->queryParams));
-        }
+//         if(empty(Yii::$app->request->queryParams['LogisticsOrderSearch'])){//无搜索条件
+//             $count = $statisticalOrder->getEmployeeCount();
+//         }else{//有搜索条件
+//             $countModel = $searchModel->search(Yii::$app->request->queryParams);
+//             $count['order_num'] = $searchModel->getEmployeeOrderNum($countModel);
+//             $count['goods_num'] = $searchModel->getEmployeeGoodsNum($countModel);
+//             $count['price'] = $searchModel->getEmployeePrice($countModel);
+//             $count['price_count'] = $searchModel->getEmployeePriceCount($searchModel->search(Yii::$app->request->queryParams));
+//             $count['same_city_order'] = $searchModel->getEmployeeSameCityOrder($countModel);
+//             $count['same_city_goods'] = $searchModel->getEmployeeSameCityGoods($countModel);
+//             $count['same_city_price'] = $searchModel->getEmployeeSameCityPrice($countModel);
+//             $count['same_city_price_count'] = $searchModel->getEmployeeSameCityPriceCount($searchModel->search(Yii::$app->request->queryParams));
+//         }
 
         $type = '';
+
         return $this->render('index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
             'menus' => $this->_getMenus(),
             'indexOver'=>$type,
-            'count' => $count,
+//             'count' => $count,
         ]);
     }
     /**
@@ -140,6 +144,7 @@ class EmployeeController extends Controller
         $user = new User();
         $modelUserBalance = new UserBalance();
         $orderRemark = new OrderRemark();
+        $orderParts = new OrderParts();
         $modelDateNum= new DateNum();
         if ($model->load(Yii::$app->request->post())) {
             try {
@@ -215,6 +220,14 @@ class EmployeeController extends Controller
                 }
                 $orderRemark->addEditRemark(['order_id'=>$model->order_id,'edit_content'=>Yii::$app->request->post('OrderRemark')['edit_content']]);
                 $modelStatisticalOrder->add($model);
+
+                //配件
+                $orderParts->addOrderParts([
+                    'order_id' => $model->order_id,
+                    'member_id' => $model->member_id,
+                    'receiving_phone' => $model->receiving_phone,
+                    'parts'=>Yii::$app->request->post('OrderParts')
+                ]);
                 $tr -> commit();
                 $tr2-> commit();
                 return $this->redirect(['view','id' => $model->order_id,'print'=>1]);
@@ -230,6 +243,7 @@ class EmployeeController extends Controller
                 $logisticsRouteInfo = $modelLogisticsRoute->getLogisticsRoute();
                 $terminusInfo = $modelTerminus->getTerminus();
                 $area = new Area();
+                $parts = new Parts();
                 return $this->render('create', [
                     'model' => $model,
                     'area' => $area,
@@ -238,6 +252,8 @@ class EmployeeController extends Controller
                     'terminus' => $terminusInfo,
                     'areaName' => '沈阳市',
                     'orderRemark' => $orderRemark,
+                    'parts' => $parts,
+                    'orderParts' => $orderParts,
                     'menus' => $this->_getMenus(),
                 ]);
             }
@@ -252,6 +268,7 @@ class EmployeeController extends Controller
             $logisticsRouteInfo = $modelLogisticsRoute->getLogisticsRoute();
             $terminusInfo = $modelTerminus->getTerminus();
             $area = new Area();
+            $parts = new Parts();
             return $this->render('create', [
                 'model' => $model,
                 'area' => $area,
@@ -260,6 +277,8 @@ class EmployeeController extends Controller
                 'terminus' => $terminusInfo,
                 'areaName' => '沈阳市',
                 'orderRemark' => $orderRemark,
+                'parts' => $parts,
+                'orderParts' => $orderParts,
                 'menus' => $this->_getMenus(),
             ]);
         }
@@ -281,6 +300,7 @@ class EmployeeController extends Controller
                 $modelGoods = new Goods();
                 $modelStatisticalOrder = new StatisticalOrder();
                 $orderRemark = new OrderRemark();
+                $orderParts = new OrderParts();
                 $orderEdit = new LogisticsOrderEdit();
                 $modelBuyInfo = new BuyInfo();
                 
@@ -363,7 +383,13 @@ class EmployeeController extends Controller
                 $model->save();
                 //备注
                 $orderRemark->addEditRemark(['order_id'=>$id,'edit_content'=>Yii::$app->request->post('OrderRemark')['edit_content']]);
-                
+                //配件
+                $orderParts->addOrderParts([
+                    'order_id' => $model->order_id,
+                    'member_id' => $model->member_id,
+                    'receiving_phone' => $model->receiving_phone,
+                    'parts'=>Yii::$app->request->post('OrderParts')
+                ]);
                 $tr->commit();
                 $modelStatisticalOrder->edit($model->logistics_sn,$model);
                 return $this->redirect(['view', 'id' => $model->order_id]);
@@ -374,6 +400,7 @@ class EmployeeController extends Controller
             $modelLogisticsRoute = new LogisticsRoute();
             $modelTerminus = new Terminus();
             $orderRemark = new OrderRemark();
+            $orderParts = new OrderParts();
             
             //$user = new User();
 //             if($model->logistics_route_id)
@@ -406,6 +433,8 @@ class EmployeeController extends Controller
                 'user' => $user,
                 'logisticsRouteInfo' => $logisticsRouteInfo,
                 'orderRemark'=>empty($orderRemark::findOne($id))?$orderRemark:$orderRemark::findOne($id),
+                'parts' => new Parts(),
+                'orderParts'=> empty($orderParts::findOne($id))?$orderParts:$orderParts::findOne($id),
                 'terminus' => $terminusInfo,
                 'area' => new Area(),
                 'areaName' => Area::getAreaNameById($model->receiving_areaid?$model->receiving_areaid:$model->receiving_cityid),
@@ -457,11 +486,19 @@ class EmployeeController extends Controller
             $return['member_areainfo'] = $userInfo->member_areainfo;
 			$return['small_num'] = $userInfo->small_num;
 			$return['id'] = $userInfo->id;
+			$modelOreder = new Order();
+			$res = $modelOreder->getOrder($userInfo->username);
+// 			$res = $modelOreder->getOrder(15010192359);
+			$return['youjian_order'] = '';
+			if($res !== false)
+			{
+			    $return['youjian_order'] = $res;
+			}
         }else{
             Yii::$app->response->format = Response::FORMAT_JSON;
             return ['code' => 400];
         }
-
+        
         Yii::$app->response->format = Response::FORMAT_JSON;
         return ['code' => 200, 'msg' => '成功', 'datas' => $return];
     }

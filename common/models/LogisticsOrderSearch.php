@@ -14,7 +14,7 @@ use common\models\LogisticsOrder;
 class LogisticsOrderSearch extends LogisticsOrder
 {
     public function attributes(){
-        return array_merge(parent::attributes(),['receivingCityName','memberCityName','userName','trueName','advance','routeName','driverTrueName','driverUserName','memberOrderNum','condition_time','condition_time_by','countnum']);
+        return array_merge(parent::attributes(),['receivingCityName','userUsername','driverUsername','trueUsername','areaAreaname','breaAreaname','breaAreaname','memberCityName','userName','trueName','advance','routeName','driverTrueName','driverUserName','memberOrderNum','condition_time','condition_time_by','countnum','time_type','selectCityName']);
     }
     
     /**
@@ -23,8 +23,8 @@ class LogisticsOrderSearch extends LogisticsOrder
     public function rules()
     {
         return [
-            [['order_id', 'goods_num', 'order_state', 'state', 'abnormal', 'collection', 'order_type', 'member_id', 'member_cityid', 'receiving_cityid', 'receiving_areaid', 'terminus_id', 'logistics_route_id', 'driver_member_id', 'freight_state', 'goods_price_state'], 'integer'],
-            [['logistics_sn', 'order_sn',  'member_name', 'member_phone', 'receiving_name', 'receiving_phone', 'receiving_name_area','receivingCityName','memberCityName','userName','trueName','advance','routeName','driverTrueName','driverUserName','condition_time','condition_time_by','countnum'], 'safe'],
+                [['order_id', 'goods_num','order_state', 'state', 'abnormal', 'collection', 'order_type', 'member_id', 'member_cityid', 'receiving_cityid', 'receiving_areaid', 'terminus_id', 'logistics_route_id', 'driver_member_id', 'freight_state', 'goods_price_state'], 'integer'],
+            [['logistics_sn', 'order_sn', 'userUsername', 'driverUsername','trueUsername','areaAreaname','breaAreaname','member_name', 'member_phone', 'receiving_name', 'receiving_phone', 'receiving_name_area','receivingCityName','memberCityName','userName','trueName','advance','routeName','driverTrueName','driverUserName','condition_time','condition_time_by','countnum','return_logistics_sn','time_type','selectCityName'], 'safe'],
             [['freight', 'goods_price', 'make_from_price', 'collection_poundage_one', 'collection_poundage_two'], 'number'],
         ];
     }
@@ -49,7 +49,7 @@ class LogisticsOrderSearch extends LogisticsOrder
     {
         $query = LogisticsOrder::find();
         // add conditions that should always apply here
-
+        $query->select('logistics_order.*');
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'pagination' => [
@@ -125,16 +125,18 @@ class LogisticsOrderSearch extends LogisticsOrder
         
         //会员号
         $query->join('LEFT JOIN','user as username','username.id = logistics_order.member_id');
-        $query->andFilterWhere(['like','username.username',$this->userName]);
-        $dataProvider->sort->attributes['userName']=[
+        $query->addSelect('username.username as userUsername');
+        $query->andFilterWhere(['like','username.username',$this->userUsername]);
+        $dataProvider->sort->attributes['userUsername']=[
                 'asc' =>['username.username'=>SORT_ASC],
                 'desc' =>['username.username'=>SORT_DESC],
         ];
-        
+
         //司机
         $query->join('LEFT JOIN','user as drivername','drivername.id = logistics_order.driver_member_id');
-        $query->andFilterWhere(['like','drivername.user_truename',$this->driverTrueName]);
-        $dataProvider->sort->attributes['driverTrueName']=[
+        $query->addSelect('drivername.user_truename as driverUsername');
+        $query->andFilterWhere(['like','drivername.user_truename',$this->driverUsername]);
+        $dataProvider->sort->attributes['driverUsername']=[
                 'asc' =>['drivername.username'=>SORT_ASC],
                 'desc' =>['drivername.username'=>SORT_DESC],
         ];
@@ -142,8 +144,9 @@ class LogisticsOrderSearch extends LogisticsOrder
         
         //开单员
             $query->join('LEFT JOIN','user as truename','truename.id = logistics_order.employee_id');
-            $query->andFilterWhere(['like','truename.user_truename',$this->trueName]);
-            $dataProvider->sort->attributes['trueName']=[
+            $query->addSelect('truename.user_truename as trueUsername');
+            $query->andFilterWhere(['like','truename.user_truename',$this->trueUsername]);
+            $dataProvider->sort->attributes['trueUsername']=[
                     'asc' =>['truename.user_truename'=>SORT_ASC],
                     'desc' =>['truename.user_truename'=>SORT_DESC],
             ];
@@ -151,15 +154,17 @@ class LogisticsOrderSearch extends LogisticsOrder
         
         //收货人市
         $query->join('INNER JOIN','area AS A','A.area_id = logistics_order.receiving_cityid');
-        $query->andFilterWhere(['like','A.area_name',$this->receivingCityName]);
-        $dataProvider->sort->attributes['receivingCityName']=[
+        $query->addSelect('A.area_name as areaAreaname');
+        $query->andFilterWhere(['like','A.area_name',$this->areaAreaname]);
+        $dataProvider->sort->attributes['areaAreaname']=[
                 'asc' =>['A.area_name'=>SORT_ASC],
                 'desc' =>['A.area_name'=>SORT_DESC],
         ];
         //发货人市
         $query->join('INNER JOIN','area AS B','B.area_id = logistics_order.member_cityid');
-        $query->andFilterWhere(['like','B.area_name',$this->memberCityName]);
-        $dataProvider->sort->attributes['memberCityName']=[
+        $query->addSelect('B.area_name as breaAreaname');
+        $query->andFilterWhere(['like','B.area_name',$this->breaAreaname]);
+        $dataProvider->sort->attributes['breaAreaname']=[
                 'asc' =>['B.area_name'=>SORT_ASC],
                 'desc' =>['B.area_name'=>SORT_DESC],
         ];
@@ -174,6 +179,7 @@ class LogisticsOrderSearch extends LogisticsOrder
         
         //路线
         $query->join('LEFT JOIN','logistics_route as route','route.logistics_route_id = logistics_order.logistics_route_id');
+        $query->addSelect('route.logistics_route_name as routeName');
         $query->andFilterWhere(['like','route.logistics_route_name',$this->routeName]);
         $dataProvider->sort->attributes['routeName']=[
                 'asc' =>['route.logistics_route_name'=>SORT_ASC],
@@ -191,6 +197,550 @@ class LogisticsOrderSearch extends LogisticsOrder
             'desc' =>['time.price_time'=>SORT_DESC],
         ];*/
 
+        
+        // 下单员只能看见
+        if($type=='over'){
+            $query->andFilterWhere(['>=', 'order_state', 70]);
+        }
+        
+        return $dataProvider;
+    }
+    
+    /**
+     * Creates data provider instance with search query applied
+     *
+     * @param array $params
+     *
+     * @return ActiveDataProvider
+     * LuXueMin
+     * 添加 开始
+     */
+
+    public function orderSearch($params,$type='')
+    {
+        $query = LogisticsOrder::find();
+        // add conditions that should always apply here
+
+        /*添加*/
+        $query->select('logistics_order.*');
+        /*end*/
+        $dataProvider = new ActiveDataProvider([
+            'query' => $query,
+            'pagination' => [
+                'pageSize' => Yii::$app->params['page_size'],
+            ],
+            'sort' => [
+                'defaultOrder' => [
+                    'order_id' => SORT_DESC,
+                ]
+            ],
+        ]);
+        $this->load($params);
+
+        if (!$this->validate()) {
+            // uncomment the following line if you do not want to return any records when validation fails
+            // $query->where('0=1');
+            return $dataProvider;
+        }
+
+        // grid filtering conditions
+        $query->andFilterWhere([
+            'order_id' => $this->order_id,
+            'freight' => $this->freight,
+            'goods_price' => $this->goods_price,
+            'make_from_price' => $this->make_from_price,
+            'goods_num' => $this->goods_num,
+            //'order_state' => $this->order_state,
+            'state' => $this->state,
+            'abnormal' => $this->abnormal,
+            'collection' => $this->collection,
+            'collection_poundage_one' => $this->collection_poundage_one,
+            'collection_poundage_two' => $this->collection_poundage_two,
+            'order_type' => $this->order_type,
+            'member_id' => $this->member_id,
+            'member_cityid' => $this->member_cityid,
+            'receiving_cityid' => $this->receiving_cityid,
+            'receiving_areaid' => $this->receiving_areaid,
+            'terminus_id' => $this->terminus_id,
+            'logistics_route_id' => $this->logistics_route_id,
+            'driver_member_id' => $this->driver_member_id,
+        ]);
+
+        if($this->goods_price == '0') {
+            $query->andFilterWhere(['goods_price' => $this->goods_price]);
+        } else if($this->goods_price == '1') {
+            $query->andFilterWhere(['>', 'goods_price', 0]);
+        }
+
+        //开单时间
+        $add_time = ArrayHelper::getValue($params, 'LogisticsOrderSearch.add_time', null);
+        if($add_time){
+            list($start, $end) = explode(' - ', $add_time);
+            $start = strtotime($start);
+            $end = strtotime($end)+60*60*24;
+
+            $query->andFilterWhere(['between', 'logistics_order.add_time', $start , $end]);
+        }
+        //状态下拉框order_state
+        if($this->order_state==71){
+            //             $query->andFilterWhere(['and','order_state = 70','collection = 1','return_logistics_sn = ""',['NOT',['&','logistics_order.state','4']]]);
+            $query->andFilterWhere(['and','order_state = 70','freight_state = 2',['or','logistics_order.state = 1','logistics_order.state = 2'],'return_logistics_sn = ""']);
+        }elseif($this->order_state==72){
+            //             $query->andFilterWhere(['and','order_state = 70',['or','collection <> 1','return_logistics_sn <> ""',['&','logistics_order.state','4']]]);
+            $query->andFilterWhere(['and','order_state = 70',['or',['and','logistics_order.state != 1','logistics_order.state != 2'],'logistics_order.freight_state = 1'],'return_logistics_sn = ""']);
+        }else{
+            $query->andFilterWhere(['order_state' => $this->order_state]);
+        }
+
+        $query->andFilterWhere(['like', 'logistics_order.logistics_sn', $this->logistics_sn])
+            ->andFilterWhere(['like', 'order_sn', $this->order_sn])
+            //->andFilterWhere(['like', 'add_time', $this->add_time])
+            ->andFilterWhere(['like', 'member_name', $this->member_name])
+            ->andFilterWhere(['like', 'logistics_order.member_phone', $this->member_phone])
+            ->andFilterWhere(['like', 'receiving_name', $this->receiving_name])
+            ->andFilterWhere(['like', 'receiving_phone', $this->receiving_phone])
+            ->andFilterWhere(['&', 'freight_state', $this->freight_state])
+            ->andFilterWhere(['&', 'goods_price_state', $this->goods_price_state])
+            ->andFilterWhere(['like', 'receiving_name_area', $this->receiving_name_area]);
+
+        if ($this->return_logistics_sn) {
+            if ($this->return_logistics_sn == 1) {
+                $query->andWhere(['!=','return_logistics_sn', '']);
+            }
+            if ($this->return_logistics_sn == 2) {
+                $query->andWhere(['return_logistics_sn' => '']);
+            }
+        }
+
+        //会员号
+        $query->join('LEFT JOIN','user as username','username.id = logistics_order.member_id');
+        $query->addSelect('username.username as userUsername');
+        $query->andFilterWhere(['like','username.username',$this->userUsername]);
+        $dataProvider->sort->attributes['userUsername']=[
+            'asc' =>['username.username'=>SORT_ASC],
+            'desc' =>['username.username'=>SORT_DESC],
+        ];
+
+        //司机
+        $query->join('LEFT JOIN','user as drivername','drivername.id = logistics_order.driver_member_id');
+        $query->addSelect('drivername.user_truename as driverUsername');
+        $query->andFilterWhere(['like','drivername.user_truename',$this->driverUsername]);
+        $dataProvider->sort->attributes['driverUsername']=[
+            'asc' =>['drivername.username'=>SORT_ASC],
+            'desc' =>['drivername.username'=>SORT_DESC],
+        ];
+
+
+        //开单员
+        $query->join('LEFT JOIN','user as truename','truename.id = logistics_order.employee_id');
+        $query->addSelect('truename.user_truename as trueUsername');
+        $query->andFilterWhere(['like','truename.user_truename',$this->trueUsername]);
+        $dataProvider->sort->attributes['trueUsername']=[
+            'asc' =>['truename.user_truename'=>SORT_ASC],
+            'desc' =>['truename.user_truename'=>SORT_DESC],
+        ];
+
+
+        //收货人市
+        $query->join('INNER JOIN','area AS A','A.area_id = logistics_order.receiving_cityid');
+        $query->addSelect('A.area_name as areaAreaname');
+        $query->andFilterWhere(['like','A.area_name',$this->areaAreaname]);
+        $dataProvider->sort->attributes['areaAreaname']=[
+            'asc' =>['A.area_name'=>SORT_ASC],
+            'desc' =>['A.area_name'=>SORT_DESC],
+        ];
+        //发货人市
+        $query->join('INNER JOIN','area AS B','B.area_id = logistics_order.member_cityid');
+        $query->addSelect('B.area_name as breaAreaname');
+        $query->andFilterWhere(['like','B.area_name',$this->breaAreaname]);
+        $dataProvider->sort->attributes['breaAreaname']=[
+            'asc' =>['B.area_name'=>SORT_ASC],
+            'desc' =>['B.area_name'=>SORT_DESC],
+        ];
+
+        //垫付
+        $query->join('LEFT JOIN','order_advance as advance','advance.order_id = logistics_order.order_id');
+        $query->andFilterWhere(['like','advance.state',$this->advance]);
+        $dataProvider->sort->attributes['advance']=[
+            'asc' =>['advance.state'=>SORT_ASC],
+            'desc' =>['advance.state'=>SORT_DESC],
+        ];
+
+        //路线
+        $query->join('LEFT JOIN','logistics_route as route','route.logistics_route_id = logistics_order.logistics_route_id');
+        $query->addSelect('route.logistics_route_name as routeName');
+        $query->andFilterWhere(['like','route.logistics_route_name',$this->routeName]);
+        $dataProvider->sort->attributes['routeName']=[
+            'asc' =>['route.logistics_route_name'=>SORT_ASC],
+            'desc' =>['route.logistics_route_name'=>SORT_DESC],
+        ];
+
+        /*
+         * 0.0
+         * 连表查询 order_time
+         */
+        /*$query->join('LEFT JOIN','order_time as time','time.order_id = logistics_order.order_id');
+         $query->andFilterWhere(['and','logistics_order.order_id ='.'logistics_order.state = 6',$this->priceTime]);
+         $dataProvider->sort->attributes['priceTime']=[
+         'asc' =>['time.price_time'=>SORT_ASC],
+         'desc' =>['time.price_time'=>SORT_DESC],
+         ];*/
+
+
+        // 下单员只能看见
+        if($type=='over'){
+            $query->andFilterWhere(['>=', 'order_state', 70]);
+        }
+
+        return $dataProvider;
+    }
+
+
+    public function nationwideSearch($params,$type='')
+    {
+
+        $query = LogisticsOrder::find();
+        // add conditions that should always apply here
+        $query->select('logistics_order.*');
+        $dataProvider = new ActiveDataProvider([
+            'query' => $query,
+            'pagination' => [
+                'pageSize' => Yii::$app->params['page_size'],
+            ],
+            'sort' => [
+                'defaultOrder' => [
+                    'order_id' => SORT_DESC,
+                ]
+            ],
+        ]);
+        $this->load($params);
+
+        if (!$this->validate()) {
+            // uncomment the following line if you do not want to return any records when validation fails
+            // $query->where('0=1');
+            return $dataProvider;
+        }
+
+        // grid filtering conditions
+        $query->andFilterWhere([
+            'order_id' => $this->order_id,
+            'freight' => $this->freight,
+            'goods_price' => $this->goods_price,
+            'make_from_price' => $this->make_from_price,
+            'goods_num' => $this->goods_num,
+            //'order_state' => $this->order_state,
+            'state' => $this->state,
+            'abnormal' => $this->abnormal,
+            'collection' => $this->collection,
+            'collection_poundage_one' => $this->collection_poundage_one,
+            'collection_poundage_two' => $this->collection_poundage_two,
+            'order_type' => $this->order_type,
+            'member_id' => $this->member_id,
+            'member_cityid' => $this->member_cityid,
+            'receiving_cityid' => $this->receiving_cityid,
+            'receiving_areaid' => $this->receiving_areaid,
+            'terminus_id' => $this->terminus_id,
+            'logistics_route_id' => $this->logistics_route_id,
+            'driver_member_id' => $this->driver_member_id,
+        ]);
+
+        if($this->goods_price == '0') {
+            $query->andFilterWhere(['goods_price' => $this->goods_price]);
+        } else if($this->goods_price == '1') {
+            $query->andFilterWhere(['>', 'goods_price', 0]);
+        }
+
+        //开单时间
+        $add_time = ArrayHelper::getValue($params, 'LogisticsOrderSearch.add_time', null);
+        if($add_time){
+            list($start, $end) = explode(' - ', $add_time);
+            $start = strtotime($start);
+            $end = strtotime($end)+60*60*24;
+
+            $query->andFilterWhere(['between', 'logistics_order.add_time', $start , $end]);
+        }
+        //状态下拉框order_state
+        if($this->order_state==71){
+            //             $query->andFilterWhere(['and','order_state = 70','collection = 1','return_logistics_sn = ""',['NOT',['&','logistics_order.state','4']]]);
+            $query->andFilterWhere(['and','order_state = 70','freight_state = 2',['or','logistics_order.state = 1','logistics_order.state = 2'],'return_logistics_sn = ""']);
+        }elseif($this->order_state==72){
+            //             $query->andFilterWhere(['and','order_state = 70',['or','collection <> 1','return_logistics_sn <> ""',['&','logistics_order.state','4']]]);
+            $query->andFilterWhere(['and','order_state = 70',['or',['and','logistics_order.state != 1','logistics_order.state != 2'],'logistics_order.freight_state = 1'],'return_logistics_sn = ""']);
+        }else{
+            $query->andFilterWhere(['order_state' => $this->order_state]);
+        }
+
+        $query->andFilterWhere(['like', 'logistics_order.logistics_sn', $this->logistics_sn])
+            ->andFilterWhere(['like', 'order_sn', $this->order_sn])
+            //->andFilterWhere(['like', 'add_time', $this->add_time])
+            ->andFilterWhere(['like', 'member_name', $this->member_name])
+            ->andFilterWhere(['like', 'logistics_order.member_phone', $this->member_phone])
+            ->andFilterWhere(['like', 'receiving_name', $this->receiving_name])
+            ->andFilterWhere(['like', 'receiving_phone', $this->receiving_phone])
+            ->andFilterWhere(['&', 'freight_state', $this->freight_state])
+            ->andFilterWhere(['&', 'goods_price_state', $this->goods_price_state])
+            ->andFilterWhere(['like', 'receiving_name_area', $this->receiving_name_area]);
+
+        if ($this->return_logistics_sn) {
+            if ($this->return_logistics_sn == 1) {
+                $query->andWhere(['!=','return_logistics_sn', '']);
+            }
+            if ($this->return_logistics_sn == 2) {
+                $query->andWhere(['return_logistics_sn' => '']);
+            }
+        }
+
+        //会员号
+        $query->join('LEFT JOIN','user as username','username.id = logistics_order.member_id');
+        $query->andFilterWhere(['like','username.username',$this->userName]);
+        $dataProvider->sort->attributes['userName']=[
+            'asc' =>['username.username'=>SORT_ASC],
+            'desc' =>['username.username'=>SORT_DESC],
+        ];
+
+        //司机
+        $query->join('LEFT JOIN','user as drivername','drivername.id = logistics_order.driver_member_id');
+        $query->andFilterWhere(['like','drivername.user_truename',$this->driverTrueName]);
+        $dataProvider->sort->attributes['driverTrueName']=[
+            'asc' =>['drivername.username'=>SORT_ASC],
+            'desc' =>['drivername.username'=>SORT_DESC],
+        ];
+
+
+        //开单员
+        $query->join('LEFT JOIN','user as truename','truename.id = logistics_order.employee_id');
+        $query->andFilterWhere(['like','truename.user_truename',$this->trueName]);
+        $dataProvider->sort->attributes['trueName']=[
+            'asc' =>['truename.user_truename'=>SORT_ASC],
+            'desc' =>['truename.user_truename'=>SORT_DESC],
+        ];
+
+
+        //收货人市
+        $query->join('INNER JOIN','area AS A','A.area_id = logistics_order.receiving_cityid');
+        $query->andFilterWhere(['like','A.area_name',$this->receivingCityName]);
+        $dataProvider->sort->attributes['receivingCityName']=[
+            'asc' =>['A.area_name'=>SORT_ASC],
+            'desc' =>['A.area_name'=>SORT_DESC],
+        ];
+        //发货人市
+        $query->join('INNER JOIN','area AS B','B.area_id = logistics_order.member_cityid');
+        $query->andFilterWhere(['like','B.area_name',$this->memberCityName]);
+        $dataProvider->sort->attributes['memberCityName']=[
+            'asc' =>['B.area_name'=>SORT_ASC],
+            'desc' =>['B.area_name'=>SORT_DESC],
+        ];
+
+        //垫付
+        $query->join('LEFT JOIN','order_advance as advance','advance.order_id = logistics_order.order_id');
+        $query->andFilterWhere(['like','advance.state',$this->advance]);
+        $dataProvider->sort->attributes['advance']=[
+            'asc' =>['advance.state'=>SORT_ASC],
+            'desc' =>['advance.state'=>SORT_DESC],
+        ];
+
+        //路线
+        $query->join('LEFT JOIN','logistics_route as route','route.logistics_route_id = logistics_order.logistics_route_id');
+        $query->andFilterWhere(['like','route.logistics_route_name',$this->routeName]);
+        $dataProvider->sort->attributes['routeName']=[
+            'asc' =>['route.logistics_route_name'=>SORT_ASC],
+            'desc' =>['route.logistics_route_name'=>SORT_DESC],
+        ];
+
+        /*
+         * 0.0
+         * 连表查询 order_time
+         */
+        /*$query->join('LEFT JOIN','order_time as time','time.order_id = logistics_order.order_id');
+         $query->andFilterWhere(['and','logistics_order.order_id ='.'logistics_order.state = 6',$this->priceTime]);
+         $dataProvider->sort->attributes['priceTime']=[
+         'asc' =>['time.price_time'=>SORT_ASC],
+         'desc' =>['time.price_time'=>SORT_DESC],
+         ];*/
+
+
+        // 下单员只能看见
+        if($type=='over'){
+            $query->andFilterWhere(['>=', 'order_state', 70]);
+        }
+
+        return $dataProvider;
+    }
+
+    /*
+     * LuXueMin
+     *添加结束
+     * */
+
+    /**
+     * Creates data provider instance with search query applied
+     *
+     * @param array $params
+     *
+     * @return ActiveDataProvider
+     */
+    public function tellerSearch($params,$type='')
+    {
+        $query = LogisticsOrder::find();
+        // add conditions that should always apply here
+        
+        $dataProvider = new ActiveDataProvider([
+            'query' => $query,
+            'db' => Yii::$app->db_slave,
+            'pagination' => [
+                'pageSize' => Yii::$app->params['page_size'],
+            ],
+            'sort' => [
+                'defaultOrder' => [
+                    'order_id' => SORT_DESC,
+                ]
+            ],
+        ]);
+        $this->load($params);
+        
+        if (!$this->validate()) {
+            // uncomment the following line if you do not want to return any records when validation fails
+            // $query->where('0=1');
+            return $dataProvider;
+        }
+        
+        // grid filtering conditions
+        $query->andFilterWhere([
+            'order_id' => $this->order_id,
+            'freight' => $this->freight,
+            'goods_price' => $this->goods_price,
+            'make_from_price' => $this->make_from_price,
+            'goods_num' => $this->goods_num,
+            //'order_state' => $this->order_state,
+            'state' => $this->state,
+            'abnormal' => $this->abnormal,
+            'collection' => $this->collection,
+            'collection_poundage_one' => $this->collection_poundage_one,
+            'collection_poundage_two' => $this->collection_poundage_two,
+            'order_type' => $this->order_type,
+            'member_id' => $this->member_id,
+            'member_cityid' => $this->member_cityid,
+            'receiving_cityid' => $this->receiving_cityid,
+            'receiving_areaid' => $this->receiving_areaid,
+            'terminus_id' => $this->terminus_id,
+            'logistics_route_id' => $this->logistics_route_id,
+            'driver_member_id' => $this->driver_member_id,
+        ]);
+        
+        if($this->goods_price == '0') { 
+            $query->andFilterWhere(['goods_price' => $this->goods_price]);
+        } else if($this->goods_price == '1') {
+            $query->andFilterWhere(['>', 'goods_price', 0]);
+        }
+        
+        //开单时间
+        $add_time = ArrayHelper::getValue($params, 'LogisticsOrderSearch.add_time', null);
+        if($add_time){
+            list($start, $end) = explode(' - ', $add_time);
+            $start = strtotime($start);
+            $end = strtotime($end)+60*60*24;
+            
+            $query->andFilterWhere(['between', 'logistics_order.add_time', $start , $end]);
+        }
+        //状态下拉框order_state
+        if($this->order_state==71){
+            //             $query->andFilterWhere(['and','order_state = 70','collection = 1','return_logistics_sn = ""',['NOT',['&','logistics_order.state','4']]]);
+            $query->andFilterWhere(['and','order_state = 70','freight_state = 2',['or','logistics_order.state = 1','logistics_order.state = 2'],'return_logistics_sn = ""']);
+        }elseif($this->order_state==72){
+            //             $query->andFilterWhere(['and','order_state = 70',['or','collection <> 1','return_logistics_sn <> ""',['&','logistics_order.state','4']]]);
+            $query->andFilterWhere(['and','order_state = 70',['or',['and','logistics_order.state != 1','logistics_order.state != 2'],'logistics_order.freight_state = 1'],'return_logistics_sn = ""']);
+        }else{
+            $query->andFilterWhere(['order_state' => $this->order_state]);
+        }
+        
+        $query->andFilterWhere(['like', 'logistics_order.logistics_sn', $this->logistics_sn])
+        ->andFilterWhere(['like', 'order_sn', $this->order_sn])
+        //->andFilterWhere(['like', 'add_time', $this->add_time])
+        ->andFilterWhere(['like', 'member_name', $this->member_name])
+        ->andFilterWhere(['like', 'logistics_order.member_phone', $this->member_phone])
+        ->andFilterWhere(['like', 'receiving_name', $this->receiving_name])
+        ->andFilterWhere(['like', 'receiving_phone', $this->receiving_phone])
+        ->andFilterWhere(['&', 'freight_state', $this->freight_state])
+        ->andFilterWhere(['&', 'goods_price_state', $this->goods_price_state])
+        ->andFilterWhere(['like', 'receiving_name_area', $this->receiving_name_area]);
+        
+        if ($this->return_logistics_sn) {
+            if ($this->return_logistics_sn == 1) {
+                $query->andWhere(['!=','return_logistics_sn', '']);
+            }
+            if ($this->return_logistics_sn == 2) {
+                $query->andWhere(['return_logistics_sn' => '']);
+            }
+        }
+        
+        //会员号
+        $query->join('LEFT JOIN','user as username','username.id = logistics_order.member_id');
+        $query->andFilterWhere(['like','username.username',$this->userName]);
+        $dataProvider->sort->attributes['userName']=[
+            'asc' =>['username.username'=>SORT_ASC],
+            'desc' =>['username.username'=>SORT_DESC],
+        ];
+        
+        //司机
+        $query->join('LEFT JOIN','user as drivername','drivername.id = logistics_order.driver_member_id');
+        $query->andFilterWhere(['like','drivername.user_truename',$this->driverTrueName]);
+        $dataProvider->sort->attributes['driverTrueName']=[
+            'asc' =>['drivername.username'=>SORT_ASC],
+            'desc' =>['drivername.username'=>SORT_DESC],
+        ];
+        
+        
+        //开单员
+        $query->join('LEFT JOIN','user as truename','truename.id = logistics_order.employee_id');
+        $query->andFilterWhere(['like','truename.user_truename',$this->trueName]);
+        $dataProvider->sort->attributes['trueName']=[
+            'asc' =>['truename.user_truename'=>SORT_ASC],
+            'desc' =>['truename.user_truename'=>SORT_DESC],
+        ];
+        
+        
+        //收货人市
+        $query->join('INNER JOIN','area AS A','A.area_id = logistics_order.receiving_cityid');
+        $query->andFilterWhere(['like','A.area_name',$this->receivingCityName]);
+        $dataProvider->sort->attributes['receivingCityName']=[
+            'asc' =>['A.area_name'=>SORT_ASC],
+            'desc' =>['A.area_name'=>SORT_DESC],
+        ];
+        //发货人市
+        $query->join('INNER JOIN','area AS B','B.area_id = logistics_order.member_cityid');
+        $query->andFilterWhere(['like','B.area_name',$this->memberCityName]);
+        $dataProvider->sort->attributes['memberCityName']=[
+            'asc' =>['B.area_name'=>SORT_ASC],
+            'desc' =>['B.area_name'=>SORT_DESC],
+        ];
+        
+        //垫付
+        $query->join('LEFT JOIN','order_advance as advance','advance.order_id = logistics_order.order_id');
+        $query->andFilterWhere(['like','advance.state',$this->advance]);
+        $dataProvider->sort->attributes['advance']=[
+            'asc' =>['advance.state'=>SORT_ASC],
+            'desc' =>['advance.state'=>SORT_DESC],
+        ];
+        
+        //路线
+        $query->join('LEFT JOIN','logistics_route as route','route.logistics_route_id = logistics_order.logistics_route_id');
+        $query->andFilterWhere(['like','route.logistics_route_name',$this->routeName]);
+        $dataProvider->sort->attributes['routeName']=[
+            'asc' =>['route.logistics_route_name'=>SORT_ASC],
+            'desc' =>['route.logistics_route_name'=>SORT_DESC],
+        ];
+        
+        /*
+         * 0.0
+         * 连表查询 order_time
+         */
+        /*$query->join('LEFT JOIN','order_time as time','time.order_id = logistics_order.order_id');
+         $query->andFilterWhere(['and','logistics_order.order_id ='.'logistics_order.state = 6',$this->priceTime]);
+         $dataProvider->sort->attributes['priceTime']=[
+         'asc' =>['time.price_time'=>SORT_ASC],
+         'desc' =>['time.price_time'=>SORT_DESC],
+         ];*/
+        
         
         // 下单员只能看见
         if($type=='over'){

@@ -11,7 +11,7 @@ $this->title = '封车';
 $this->params['breadcrumbs'][] = $this->title;
 $this->params['leftmenus'] = $menus;
 ?>
-<?php $form = ActiveForm::begin(['method'=>'get'])?>
+<?php $form = ActiveForm::begin(['action'=>['driver-manager/index'],'method'=>'get'])?>
    <?= $form->field($LogisticsOrder, 'logistics_sn',['labelOptions' => ['label' => Yii::$app->params['logistics_sn']]])->textInput(['value' => $params['logistics_sn']]) ?>
    <?= $form->field($goods, 'goods_sn',['labelOptions' => ['label' => Yii::$app->params['goods_sn']]])->textInput(['value' => $params['goods_sn']]) ?>
    <?= $form->field($LogisticsOrder, 'add_time')->label('开单时间')->widget(DateRangePicker::classname(), [
@@ -31,14 +31,19 @@ $this->params['leftmenus'] = $menus;
     <?php echo Html::submitButton('搜索', ['class'=>'btn btn-primary','name' =>'submit-button']) ?>
     <?php //echo Html::button('封车打印', ['class'=>'btn btn-primary js-loading-print']) ?>
 <?php ActiveForm::end()?>
+<?= LinkPager::widget(['pagination' => $pages]); ?>
 <div class="body-content">
 <input type="hidden" id="driver_id" value="<?php echo $driver_id?>">
+<input type="hidden" id="count_js" value="<?=$count;?>">
+<input type="hidden" id="rule" value=<?= $rule?> >
 </div>
 <?php if(!empty($orderList)){?>
     <table class="table tableTop">
-       
        <tbody>
        <thead>
+        <tr class="row">
+              <div > 当前已选中<strong id="count"><?=$count;?></strong>项</div>
+          </tr>
               <tr class="tableBg">
               <th width="80px"><?= Html::checkbox('all',true,['style'=>'margin-right:5px','id'=>'check_all']);?>全选</th>
                  <th><?=Yii::$app->params['logistics_sn']?></th>
@@ -58,9 +63,9 @@ $this->params['leftmenus'] = $menus;
         ?>
             
           <tr class="info">
-          <td><?= Html::checkbox('print',true,['class'=>'order_check checkbox'.$value['order_id'],'value' => $value['order_id']]);?></td>
+          <td><?= Html::checkbox('print',in_array($value['order_id'],$order_arr)||!isset($_GET['page'])?true:false,['class'=>'order_check checkbox'.$value['order_id'],'value' => $value['order_id']]);?></td>
              <td><?php echo $value['logistics_sn']; ?></td>
-             <td><?php if($value['order_type']==1) echo '西部';if($value['order_type']==3) echo '瑞胜'; ?></td>
+             <td><?php if($value['order_type']==1) echo '西部';if($value['order_type']==3) echo '瑞胜';if($value['order_type']==4) echo '塔湾'; ?></td>
              <td><?php echo $value['goods_price']; ?></td>
              <td><?php echo $value['member_name']; ?></td>
              <td><?php echo $value['receiving_name']; ?></td>
@@ -96,6 +101,7 @@ $this->params['leftmenus'] = $menus;
         <?php }?>
        </tbody>
     </table>
+    <div><?php echo Html::button('批量处理', ['class'=>'btn btn-primary js-goods-submit']) ?></div>
     <?= LinkPager::widget(['pagination' => $pages]); ?>
-   
+
 <?php }?>

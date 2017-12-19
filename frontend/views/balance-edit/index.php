@@ -2,6 +2,9 @@
 
 use yii\helpers\Html;
 use yii\grid\GridView;
+use yii\bootstrap\Modal;
+use frontend\assets\BalanceEditIndexAsset;
+BalanceEditIndexAsset::register($this);
 
 /* @var $this yii\web\View */
 /* @var $searchModel common\models\LogisticsOrderSearch */
@@ -93,16 +96,31 @@ $this->params['leftmenus'] = $menus;
                  },
                  'delete' => function ($url, $model, $key) {
                      $options = [
-                             'title' => Yii::t('yii', 'View'),
-                             'aria-label' => Yii::t('yii', 'View'),
-                             'data-confirm' => '是否删除订单'.$model->logistics_sn.'?',
-                             'data-method' => 'post',
-                             'data-pjax' => '0',
+                             'data-order-id'=>$model->order_id,
+                             'class' => 'operation',
+                             'data-toggle' => 'modal',
+                             'data-target' => '#create-modal',
                      ];
-                 return Html::a('删除', $url, $options);
+                 return Html::a('删除', 'javascript:;', $options);
                  },
                 ]
             ],
         ],
     ]); ?>
 </div>
+<?php Modal::begin([
+        'id' => 'create-modal',
+        'header' => '<h4 class="modal-title">备注信息</h4>',
+]);
+?>
+<div class="payDiv">
+    <div class="payInput">
+    	<?=Html::input('text','delContent','',['id'=>'delContent','class' => 'form-control pay-input']);?>
+    	<?=Html::input('hidden','order_id','',['id'=>'order_id','class' => 'form-control pay-input']);?>
+    </div>
+    <div class="row payButtonDiv">
+    	<div class="col-md-6 payButton"><?php echo Html::button('确定', ['id'=>'confirm','class'=>'btn btn-primary']);?></div>
+    	<div class="col-md-6 payButton"><?php echo Html::button('取消', ['class'=>'btn btn-primary','data-dismiss'=>'modal']);?></div>
+    </div>
+</div>
+<?php Modal::end();?>

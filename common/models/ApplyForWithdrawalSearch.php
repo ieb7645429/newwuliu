@@ -52,6 +52,7 @@ class ApplyForWithdrawalSearch extends ApplyForWithdrawal
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'db' => Yii::$app->db_slave
         ]);
 
         $this->load($params);

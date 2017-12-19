@@ -235,50 +235,75 @@ class UserAll extends ActiveRecord implements IdentityInterface
 	*  2017/10/10
 	*  rain
 	**/
-	public function Check_App_Login($data,$type=''){
-	   $token = '';
-	   $flag  = '';
-       $value = self::findByUsername($data['user']);
-	   $this->password_hash = $value->password_hash;
-	   if($this->validatePassword($data['pwd']))
-	   {
-		 $this->generateAuthKey();//获取tonken
-		 $token = $this->auth_key;
+    public function Check_App_Login($data, $type = '')
+    {
+        $token = '';
+        $flag = '';
+        $value = self::findByUsername($data['user']);
+        $this->password_hash = $value->password_hash;
 
-		 if(!empty($type)){
-			$login = new AppLogin();
-            $login_ = $login->findOne(['user_id' =>$value->id]);
-			if(!empty($login_)){
-			  $login = $login_;
-			}
-			$login->user_id = $value->id;
-			//判断status是否为1，若为1不记录token
-			if($login->status==0){
-			  $login->token   = $token;
-			  /*2017-10-10修改*/
-			  if($login->save()){
-			   $flag = $login->token;
-			  }
+        //先不分地区
+//        if(!empty($value)){
+//            switch ($value->area){
+//                case 'sy':
+//                    $login = new AppLogin();
+//                    break;
+//                case 'hlj':
+//                    $login = new \frontend\modules\hlj\models\AppLogin();
+//                    break;
+//                case 'dl':
+//                    $login = new \frontend\modules\dl\models\AppLogin();
+//                    break;
+//                default:
+//                    $login = new AppLogin();
+//            }
+//        }
 
-			}
-			//status为1不允许登陆、2017-10-10
-			elseif($login->status==1){
-			  $flag = 'no';
-			}
-            /* if($login->save()){
-			   $flag = $login->token;
-			  }
-			*/
-		 }
-		 else{
-			 $value->App_Key = $token;
-			 if($value->save()){
-			   $flag = $token;
-			 }
-		 }
-	   }
-	   return  $flag;
-	}
+        //2017-11-15，扫码登陆不需要验证密码
+        //2017-11-23,需要不需要验证密码
+
+        // if(empty($type)){
+        //  $pwd = true;
+        // }
+        // else{
+        $pwd = $this->validatePassword($data['pwd']);
+        // }
+        if ($pwd) {
+            $this->generateAuthKey();//获取tonken
+            $token = $this->auth_key;
+
+            if (!empty($type)) {
+                $login = new AppLogin();
+                $login_ = $login->findOne(['user_id' => $value->id]);
+                if (!empty($login_)) {
+                    $login = $login_;
+                }
+                $login->user_id = $value->id;
+                //判断status是否为1，若为1不记录token
+                if ($login->status == 0) {
+                    $login->token = $token;
+                    /*2017-10-10修改*/
+                    if ($login->save()) {
+                        $flag = $login->token;
+                    }
+
+                } //status为1不允许登陆、2017-10-10
+                elseif ($login->status == 1) {
+                    $flag = 'no';
+                }
+                /* if($login->save()){
+                   $flag = $login->token;
+                  }
+                */
+            } else {
+                $value->App_Key = $token;
+                if ($value->save()) {
+                    $flag = $token;
+                }
+            }
+        }
+        return $flag;
+    }
 	/**
 	*  查询用户相关信息
 	*  @参数 $data
@@ -334,6 +359,29 @@ if($contacts_phone!='' && $store_name!='' && $small_num !=''){
 	    if($count>0||$count_youjian_store>0||$count_youjian_seller>0||$count_youjian_member>0)
 	        return false;
 	    return true;
+	}
+	
+	/**
+	 * 司机app登录y验证
+	 * @param unknown $appkey
+	 * @param unknown $appType
+	 * @return number|\yii\db\ActiveRecord|array|NULL
+	 */
+	public function appLogin($appkey, $appType = null)
+	{
+	    if(isset($appType) && $appType== 'driver')
+	    {
+	        $user = self::find()->innerJoin('app_login','user_all.id=app_login.user_id')
+	        ->where(['app_login.token'=>$appkey])
+	        ->one();
+	        if(!empty($user) && $user->status == 1)
+	        {
+	            return 10004;
+	        }
+	    }else{
+	        $user = self::find()->where(['App_Key'=>$appkey])->one();
+	    }
+	    return $user;
 	}
 	/**
 	 * 验证会员号是否为手机号

@@ -48,12 +48,12 @@ class SmallPrint extends \yii\db\ActiveRecord
      * 添加小码单打印记录
      * @param unknown $data
      */
-    public function addSmallHistory($data){
+    public function addSmallHistory($data,$driver_id){
         
         try{
             $tr = Yii::$app->db->beginTransaction();
                 $this->print_time = time();
-                $this->print_member_id = Yii::$app->user->id;
+                $this->print_member_id = $driver_id;
                 $this->save(); 
                 $arr = $this->getSmallValue($data);
                 $smallOrder = new SmallPrintOrder();
@@ -79,6 +79,7 @@ class SmallPrint extends \yii\db\ActiveRecord
             $arr[$key]['make_from_price'] = $value['make_from_price'];
             $arr[$key]['shipping_sale'] = $value['shipping_sale'];
             $arr[$key]['receiving_name'] = $value['receiving_name'];
+            $arr[$key]['goods_num'] = $value['goods_num'];
         }
         $result['time'] = date('Y/m/d',time());
         $result['data'] = $arr;

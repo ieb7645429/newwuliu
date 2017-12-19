@@ -12,9 +12,8 @@ $this->params['breadcrumbs'][] = $this->title;
 $this->params['leftmenus'] = $menus;
 ?>
 
-<?php $form = ActiveForm::begin(['method'=>'get'])?>
+<?php $form = ActiveForm::begin(['action'=>['sorting/abnormal'],'method'=>'get'])?>
     <?= $form->field($return, 'logistics_sn',['labelOptions' => ['label' => Yii::$app->params['logistics_sn']]])->textInput(['value' => $params['logistics_sn']]) ?>
-    <?= $form->field($returnGoods, 'goods_sn',['labelOptions' => ['label' => Yii::$app->params['goods_sn']]])->textInput(['value' => $params['goods_sn']]) ?>
     <?= $form->field($return, 'add_time')->label('开单时间')->widget(DateRangePicker::classname(), [
             'convertFormat'=>true,
             'presetDropdown'=>true,

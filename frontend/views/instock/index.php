@@ -12,9 +12,8 @@ $this->params['breadcrumbs'][] = $this->title;
 $this->params['leftmenus'] = $menus;
 ?>
 
-<?php $form = ActiveForm::begin(['method'=>'get'])?>
+<?php $form = ActiveForm::begin(['action'=>['instock/index'],'method'=>'get'])?>
     <?= $form->field($return, 'logistics_sn',['labelOptions' => ['label' => Yii::$app->params['logistics_sn']]])->textInput(['value' => $params['logistics_sn']]) ?>
-    <?= $form->field($returnGoods, 'goods_sn',['labelOptions' => ['label' => Yii::$app->params['goods_sn']]])->textInput(['value' => $params['goods_sn']]) ?>
     <?= $form->field($return, 'add_time')->label('开单时间')->widget(DateRangePicker::classname(), [
             'convertFormat'=>true,
             'presetDropdown'=>true,
@@ -29,16 +28,23 @@ $this->params['leftmenus'] = $menus;
    ])?>
    <?= $form->field($return, 'member_cityid')->label('城市筛选')->dropDownList($cityList,['prompt' => '全部城市','options'=>[$city_id=>['Selected'=>true]]]) ?>
     <?php echo Html::submitButton('搜索', ['class'=>'btn btn-primary','name' =>'submit-button']) ?>
+    <?php echo Html::button('提交', ['class'=>'btn btn-primary js-submit']) ?>
+    <?php echo Html::button('批量处理', ['class'=>'btn btn-primary js-goods-submit']) ?>
     <?= Html::button('退货打印', ['class'=>'btn btn-primary js-print'])?>
 <?php ActiveForm::end()?>
 <?php if(!empty($orderList)){?>
-<div>总计:<?= $count;?>票</div>
+<?= LinkPager::widget(['pagination' => $pages]); ?>
+<input type="hidden" id="count_js" value="<?=$check_count;?>">
     <table class="table tableTop tableTop10">
        
        <tbody>
        <thead>
+       <tr class="row">
+       <div>总计:<?= $count;?>票</div>
+              <div > 当前已选中<strong id="count"><?=$check_count;?></strong>项</div>
+          </tr>
               <tr class="tableBg">
-              <th width="80px"><?= Html::checkbox('all',false,['style'=>'margin-right:5px','id'=>'check_all']);?>全选</th>
+              <th width="80px"><?= Html::checkbox('all',true,['style'=>'margin-right:5px','id'=>'check_all']);?>全选</th>
                  <th><?=Yii::$app->params['logistics_sn']?></th>
                  <th>代收款</th>
                  <th>发货人</th>
@@ -55,7 +61,7 @@ $this->params['leftmenus'] = $menus;
             
           <tr class="info">
           <?php if($value['checkbox']==1)$checkbox = true;else$checkbox = false;?>
-          <td><?= Html::checkbox('print',$checkbox,['class'=>'order_check checkbox'.$value['order_id'],'value' => $value['order_id']]);?></td>
+          <td><?= Html::checkbox('print',in_array($value['order_id'],$order_arr)||!isset($_GET['page'])?true:false,['class'=>'order_check checkbox'.$value['order_id'],'value' => $value['order_id']]);?></td>
              <td><?php echo $value['logistics_sn']; ?></td>
              <td><?php echo $value['goods_price']; ?></td>
              <td><?php echo $value['member_name']; ?></td>
@@ -81,7 +87,7 @@ $this->params['leftmenus'] = $menus;
                             <td>
                             <?php if($identity!=0):?>
                                 <?php if($v['buttonType']==1){?>
-                                    <span class="operation" data-order-id=<?php echo $value['order_id']?> data-goods-id="<?php echo $v['goods_id']?>">处理</span>
+                                    <span class="operation order_<?=$value['order_id']?>" data-order-id=<?php echo $value['order_id']?> data-goods-id="<?php echo $v['goods_id']?>">处理</span>
                                 <?php }else{?>
                                     <span class="finish" data-order-id=<?php echo $value['order_id']?> data-goods-id="<?php echo $v['goods_id']?>">已处理</span>
                                 <?php }?>

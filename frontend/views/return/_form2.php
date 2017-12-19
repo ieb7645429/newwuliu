@@ -20,15 +20,6 @@ use common\models\ShippingTpye;
     <?php // echo $form->field($model, 'logistics_sn')->textInput(['maxlength' => true]) ?>
 
 <div class="title_bg">
-    <span>订单信息</span>
-</div>
-<div class="table01">
-        <?php // echo $form->field($model, 'order_sn')->textInput(['maxlength' => true]) ?>
-        <div class="table_div">
-        <?= $form->field($model, 'order_type')->dropDownList(array('1'=>'西部','3'=>'瑞胜', '4'=>'塔湾'),['options'=>[$model->order_type=>['Selected'=>true]]]) ?>
-        </div>
-</div>
-<div class="title_bg">
     <span>发货信息</span>
 </div>
 <div class="table01">
@@ -38,6 +29,9 @@ use common\models\ShippingTpye;
       <div class="table_div">
           <?= $form->field($model, 'member_name')->textInput(['maxlength' => true]) ?>
       </div>
+      <div class="table_div">
+        <?= $form->field($model, 'order_type')->dropDownList(array('1'=>'西部','3'=>'瑞胜', '4'=>'塔湾'),['prompt' => '请选择','options'=>[$model->order_type=>['Selected'=>true]]]) ?>
+        </div>
 </div>
 <div class="table01">
       <div class="table_div">

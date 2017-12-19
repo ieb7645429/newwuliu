@@ -3,6 +3,8 @@
 use yii\helpers\Html;
 use yii\grid\GridView;
 use yii\bootstrap\Modal;
+use yii\widgets\ActiveForm;
+use kartik\daterange\DateRangePicker;
 use frontend\assets\ReturnAsset;
 ReturnAsset::register($this);
 /* @var $this yii\web\View */
@@ -28,14 +30,41 @@ $this->params['leftmenus'] = $menus;
 <?php }else{
         $template = '{view} {sender} {delete}';
 }?>
+
+<?php $form = ActiveForm::begin(['action'=>['return/index'],'method'=>'get'])?>
+<?= $form->field($searchModel, 'add_time')->label('开单时间')->widget(DateRangePicker::classname(), [
+        'convertFormat'=>true,
+        'presetDropdown'=>true,
+        'model'=>$searchModel,
+        'options' => [
+            'class' => 'form-control',
+            'value' => !empty(Yii::$app->request->get('LogisticsReturnOrderSearch')['add_time']) ? Yii::$app->request->get('LogisticsReturnOrderSearch')['add_time'] : date('Y-m-d') .' - ' . date('Y-m-d') ,
+        ],
+        'pluginOptions'=>[
+            'locale'=>['format'=>'Y-m-d', 'separator'=>' - ',]
+        ]
+])?>
+<div class="form-group">
+	<?= Html::hiddenInput('download_type', '0', ['id' => 'download_type']) ?>
+    <?= Html::submitButton('查询', ['class' => 'btn btn-primary','id'=>'searchButton']) ?>
+    <?= Html::Button('导出Excel', ['class' => 'btn btn-warning', 'id' => 'downloadExcel']); ?>
+    <?php // echo Html::resetButton('重置', ['class' => 'btn btn-default']); ?>
+</div>
+<?php //echo '商品数量:'.$goods_num.'件  今日订单:'.($orderNum['1']['orderNum']+$orderNum['2']['orderNum']).'  今日同城订单:'.$orderNum['1']['orderNum'].'  代收款订单数 :'.$allPrice['count'].'件   代收款金额:'.$allPrice['price'];?>
+<?php ActiveForm::end(); ?>
+
+
+
     <table class="table">
     <tr>
-    	<th>退款金额</th>
     	<th>票数</th>
+    	<th>代收款</th>
+    	<th>运费</th>
     </tr>
     <tr>
-    	<td><?= empty($count['order_price'])?0:$count['order_price']?></td>
     	<td><?= empty($count['order_num'])?0:$count['order_num']?></td>
+    	<td><?= empty($count['order_price'])?0:$count['order_price']?></td>
+    	<td><?= empty($count['freight'])?0:$count['freight']?></td>
     </tr>
     </table>
     <?= GridView::widget([
@@ -80,6 +109,14 @@ $this->params['leftmenus'] = $menus;
                     },
                     'filter'=>['1'=>'西部','3'=>'瑞胜','4'=>'塔湾']
     
+                ],
+                [
+                    'label' => '退回类型',
+                    'attribute' => 'return_type',
+                    'value' => function($model){
+                        return $model->getReturnTypeName($model->return_type);
+                    },
+                    'filter'=>['1'=>'返货','2'=>'退货','3'=>'追回']
                 ],
                 [
                 'attribute' => 'order_state',
@@ -129,6 +166,13 @@ $this->params['leftmenus'] = $menus;
             'receiving_name',
             'receiving_phone',
             [
+                'label'=>'开单时间',
+                'attribute'=>'add_time',
+                'value'=>function($model){
+                    return date('Y-m-d H:i:s',$model->add_time);
+                 }
+            ],
+            [
                 'label' => '开单员',
                 'attribute' => 'trueName',
                 'value' => 'trueName.user_truename',
@@ -150,7 +194,7 @@ $this->params['leftmenus'] = $menus;
              'template' => $template,
              'buttons' => [
                 'update' => function ($url, $model, $key) {
-                    if($model->order_state<50){
+                    if($model->order_state<50&&$model->return_type!=3){
                         if($model->return_type==1){
                             $url = '?r=return/update&id='.$model->order_id;
                         }else{
@@ -160,9 +204,9 @@ $this->params['leftmenus'] = $menus;
                     }
                  },
 				 'view' => function ($url, $model, $key) {
-				 if($model->return_type==1){
+				 if($model->return_type==1||$model->return_type==3){
 				     $url = '?r=return/view&id='.$model->order_id;
-				 }else{
+				 }else if($model->return_type==2){
 				     $url = '?r=return/view2&id='.$model->order_id;
 				 }
                     return Html::a('查看', $url);

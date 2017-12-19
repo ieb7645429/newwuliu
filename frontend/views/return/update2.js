@@ -9,6 +9,19 @@ var returnCreate = {
         $('#logisticsreturnorder-receiving_phone').on('blur', this._memberPhoneBlurCallBack);
         $('#logisticsreturnorder-collection').on('change',this._changeCollection);
         $('#logisticsreturnorder-add_goods_price').on('click', this._addGoosInfoClickCallBack);
+        $("#w0").find(":input:enabled:not(:hidden)").keydown(function(event) {
+            if(event.which == 13) {
+                event.stopPropagation();
+                event.preventDefault();
+                var inputs = $("#w0").find(":input:enabled:not(:hidden)");
+                var idx = inputs.index(this);
+                if (idx < inputs.length - 1) {// 判断是否是最后一个输入框  
+                    inputs[idx + 1].focus();
+                } else {
+                    $(this).click();
+                }
+            }
+        });
     },
 
     _memberPhoneBlurCallBack : function() {

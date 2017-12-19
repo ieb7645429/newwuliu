@@ -3,6 +3,9 @@
 namespace common\models;
  
 use Yii;
+use common\models\LogisticsCar;
+use common\models\Driver;
+use common\models\LogisticsArea;
 
 /**
  * This is the model class for table "logistics_route".
@@ -25,6 +28,7 @@ class LogisticsRoute extends \yii\db\ActiveRecord
         return 'logistics_route';
     }
 
+
     /**
      * @inheritdoc
      */
@@ -32,6 +36,8 @@ class LogisticsRoute extends \yii\db\ActiveRecord
     {
         return [
             [['logistics_route_code', 'logistics_route_no', 'logistics_route_name'], 'string', 'max' => 155],
+            [['logistics_route_id'], 'safe'],
+            [['logistics_route_name', 'logistics_route_code', 'logistics_route_no', 'same_city'], 'required'],
         ];
     }
 
@@ -41,12 +47,38 @@ class LogisticsRoute extends \yii\db\ActiveRecord
     public function attributeLabels()
     {
         return [
-            'logistics_route_id' => 'Logistics Route ID',
-            'logistics_route_code' => 'Logistics Route Code',
-            'logistics_route_no' => 'Logistics Route No',
-            'logistics_route_name' => 'Logistics Route Name',
+            'logistics_route_code' => '地区字母编号',
+            'logistics_route_no' => '地区数字编号',
+            'logistics_route_name' => '路线名称',
+            'same_city' => '是否同城',
         ];
     }
+
+    /**
+     * 更新route
+     * @Author:Fenghuan
+     * @param $data
+     * @param $condition
+     * @return int
+     */
+    public function updateRoute($data, $condition)
+    {
+        return self::updateAll($data, $condition);
+    }
+
+    //route->car
+    public function getRouteOfCar()
+    {
+        //tableName of joinWith is lower case
+        return $this->hasMany(LogisticsCar::className(), ['logistics_route_id' => 'logistics_route_id'])->joinWith('carOfDriver');
+    }
+
+    //route -> logistics_area
+    public function getRouteOfLogisticsArea()
+    {
+        return $this->hasOne(LogisticsArea::className(), ['logistics_route_id' => 'logistics_route_id']);
+    }
+
     
     public function getLogisticsRouteData($logisticsRouteId)
     {
@@ -112,6 +144,32 @@ class LogisticsRoute extends \yii\db\ActiveRecord
     {
     	return self::findOne($id);
     }
+
+    /**
+     * 判断拼音状态
+     * @Author:Fenghuan
+     * @param $id
+     * @return bool
+     */
+    public function getPinyinStatus($id)
+    {
+        $item = $this->getLogisticsRouteFindOne($id);
+
+        if ($item->area_id) {
+            $res = Area::findModel($item->area_id);
+        }
+        else if ($item->city_id) {
+            $res = Area::findModel($item->city_id);
+        }
+        else{
+            //异常
+            return false;
+        }
+
+        return $res;
+
+
+    }
     
     /**
      * 查询物流线路
@@ -163,8 +221,57 @@ class LogisticsRoute extends \yii\db\ActiveRecord
         return $routeList;
         
     }
-
-
+    
+    /**
+     * 获取司机列表
+     * @param unknown $logRouteId
+     * @return \common\models\unknown|array|\yii\db\ActiveRecord[]
+     */
+    public function driverlist($logRouteId = null)
+    {
+        $arr['user'] = array();
+        $arr['LogisticsRoute'] = $this->getLogRoute();
+        if($logRouteId > 0 )
+        {
+            $arr['user'] = $this->getlogisticsRouteUser($logRouteId);
+            if(!empty($arr['user']))
+            {
+                foreach ($arr['user'] as $k => $v)
+                {
+                    $arr['user'][$k]['App_Key'] = UserAll::findOne($v['id'])->App_Key;
+                }
+            }
+        }
+        return $arr;
+    }
+    
+    /**
+     * 获取线路信息
+     * @return unknown
+     */
+    private function getLogRoute()
+    {
+        $model = new LogisticsRoute();
+        $arr['sameCity'] = array();
+        $arr['sameCity2'] = array();
+        $arr['sameCity'] = $model->getLogisticsRouteInfo(array('same_city'=>1));
+        $arr['sameCity2'] = $model->getLogisticsRouteInfo(array('same_city'=>2));
+        return $arr;
+    }
+    
+    /**
+     * 获取线路对应的用户
+     */
+    private function getlogisticsRouteUser($logRouteId)
+    {
+        $query = LogisticsRoute::find();
+        $query->select('user.username,user.user_truename,user.id');
+        $query->innerJoin('logistics_car','logistics_route.logistics_route_id = logistics_car.logistics_route_id');
+        $query->innerJoin('driver','driver.logistics_car_id = logistics_car.logistics_car_id');
+        $query->innerJoin('user','driver.member_id = user.id');
+        $query->where(['logistics_route.logistics_route_id'=>1]);
+        return $query->asArray()->all();
+    }
 
     /**
      * @desc 根据Id取得 logistics_route_name

@@ -25,6 +25,7 @@ use common\models\Terminus;
 use common\models\Driver;
 use common\models\LogisticsLines;
 use common\models\AppLogin;
+use common\models\LogisticsCar;
 
 /**
  * TruckloadingController implements the CRUD actions for Goods model.
@@ -53,6 +54,11 @@ class TruckloadingController extends Controller
 				    'driver-change-status',
 				    'getisstart',
 				    'appupgrade-dreiver',
+                    'driverlist',
+                    'order-info',
+                    'set-goods-state',
+				    'get-route-info',//created by fenghuan
+                    'get-route-view',//created by fenghuan
                 ]
             ],
             'verbs' => [
@@ -63,10 +69,16 @@ class TruckloadingController extends Controller
                  'sendinterface' => ['post'],          //只允许用post方式访问
 				 'status' => ['post'],
 				 'getsmallnum' => ['post'],
-            		'getinfo' => ['post'],
+                 'getinfo' => ['post'],
 				 'driver-change-status' => ['post'],
 				 'getisstart'=>['post'],
-                  ],
+				 'driverlist'=>['post'],
+				 'order-info'=>['post'],
+                'set-goods-state'=>['post'],
+                'get-route-info' => ['post'],
+                'get-route-view' => ['post'],
+
+            ],
              ],
         ];
     }
@@ -131,6 +143,7 @@ class TruckloadingController extends Controller
 		$url = strtoupper(md5($mac.'1813514w'));
 		return $url;
 	}
+	
 	//过滤
 	private function form_strip($formvalue)
 	{
@@ -145,6 +158,7 @@ class TruckloadingController extends Controller
 	* @param  ： user,pwd,key
 	* @date   ： 2017-07-27
 	* @author :  xiaoyu
+	* @modify :  2017-11-15司机登陆扫码不需要密码
 	**/
 	public function actionApplogin(){
 	   //获取参数
@@ -153,7 +167,7 @@ class TruckloadingController extends Controller
 			 return $this->get_jsoncode(10002,'','参数为空');
 			 exit;
 		 }
-		 if($this->create_secrect(Yii::$app->request->post())!=Yii::$app->request->post('key')){
+	 if($this->create_secrect(Yii::$app->request->post())!=Yii::$app->request->post('key')){
 		     return $this->get_jsoncode(10004,'','参数非法');
 			 exit;
 		 }
@@ -174,56 +188,201 @@ class TruckloadingController extends Controller
 	* @date   ： 2017-10-09
 	* @author :  xiaoyu
 	**/
-	public function actionDriverlogin(){
-	   //获取参数
-      if(!Yii::$app->request->post('user') || !Yii::$app->request->post('pwd') || !Yii::$app->request->post('key'))
-		{
-			 return $this->get_jsoncode(10002,'','参数为空');
-			 exit;
-		 }
-		 if($this->create_secrect(Yii::$app->request->post())!=Yii::$app->request->post('key')){
-		     return $this->get_jsoncode(10004,'','参数非法');
-			 exit;
-		 }		
-		 
-       //判断是否为司机如果是司机执行下一步
-	   	 $user   = new UserAll();
-         $userId = $user->getMemberInfo(array('username'=>Yii::$app->request->post('user')));
-		// echo($userId->id);
-         $role = array_keys(Yii::$app->authManager->getRolesByUser($userId->id))[0]; 
-         if($role != '司机'){
-			 return $this->get_jsoncode(10002,'','登陆失败');
-			 exit;
-		 }
-		 $arr['user'] = Yii::$app->request->post('user');
-         $arr['pwd']  = Yii::$app->request->post('pwd');
-		 $token       = $user->Check_App_Login($arr,'driver');
-		 if($token){
-			  /*
-			  当前applogin表status为1不允许登陆
-			  2017-10-10
-			  修改
-			  */
-			  if($token == 'no'){
-			    return $this->get_jsoncode(10004,'','其它司机正在送货中');
-			  }
-			  /*
-			   end
-			  */
-			  //查询线路
-			  $driver  = new Driver();
-			  $info    = $driver->getDriverRouteInfo($userId->id);
-			  $new_arr = array('UserId'=>$userId->id,
-				  'Token'=>$token,
-				  'RouteName'=>$info['logistics_route_name'],
-				  'SameCity'=>$info['same_city']				
-				  );
-  			  return $this->get_jsoncode(10000,$new_arr,'登陆成功');
-		  }
-		  else{
-			 return $this->get_jsoncode(10001,'','用户名密码或保存错误');
-		 }
+    public function actionDriverlogin()
+    {
+        //获取参数
+        if (!Yii::$app->request->post('user') || !Yii::$app->request->post('pwd') || !Yii::$app->request->post('key')) {
+            return $this->get_jsoncode(10002, '', '参数为空');
+            exit;
+        }
+        if ($this->create_secrect(Yii::$app->request->post()) != Yii::$app->request->post('key')) {
+            return $this->get_jsoncode(10004, '', '参数非法');
+            exit;
+        }
+
+        //判断是否为司机如果是司机执行下一步
+        $user = new UserAll();
+        $arr['user'] = Yii::$app->request->post('user');
+        $arr['pwd'] = Yii::$app->request->post('pwd');
+        $token = $user->Check_App_Login($arr, 'driver');
+        if ($token) {
+            $userId = $user->getMemberInfo(array('username' => $arr['user']));
+            // echo($userId->id);
+            $role = array_keys(Yii::$app->authManager->getRolesByUser($userId->id))[0];
+            if (!strstr($role, '司机')) {
+
+                return $this->get_jsoncode(10002, '', '登陆失败');
+                exit;
+            }
+
+            /*
+            当前applogin表status为1不允许登陆
+            2017-10-10
+            修改
+            */
+            if ($token == 'no') {
+                return $this->get_jsoncode(10004, '', '其它司机正在送货中');
+            }
+            /*
+             end
+            */
+            //查询线路
+            /*
+             根据地区查找对应线路
+             2017-11-29
+             xiaoyu
+            */
+            //先不分地区
+//            switch ($userId->area) {
+//                case 'sy':
+//                    $driver = new Driver();
+//                    break;
+//                case 'hlj':
+//                    $driver = new \frontend\modules\hlj\models\Driver();
+//                    break;
+//                case 'dl':
+//                    $driver = new \frontend\modules\dl\models\Driver();
+//                    break;
+//                default:
+//                    $driver = new Driver();
+//            }
+
+            $driver = new Driver();
+
+
+            $info = $driver->getDriverRouteInfo($userId->id);
+            $new_arr = array('UserId' => $userId->id,
+                'Token' => $token,
+                'RouteName' => empty($info['logistics_route_name']) ? '' : $info['logistics_route_name'],
+                'SameCity' => empty($info['same_city']) ? '' : $info['same_city']
+            );
+            return $this->get_jsoncode(10000, $new_arr, '登陆成功');
+        } else {
+            return $this->get_jsoncode(10001, '', '用户名密码或保存错误');
+        }
+    }
+	
+	/**
+	 * 扫码枪查询货号
+	 * @return string
+	 */
+	public function actionOrderInfo()
+	{
+	    if(empty(Yii::$app->request->post('AppKey')))
+	    {
+	        return $this->get_jsoncode(10001,array(),'参数错误');
+	    }
+	    $model = new UserAll();
+	    $user = $model->appLogin(Yii::$app->request->post('AppKey'), Yii::$app->request->post('appType'));
+	    if($user === 10004)
+	    {
+	        return $this->get_jsoncode(10004,array(),'其它司机正在送货中');
+	    }
+	    if(empty($user))
+	    {
+	        return $this->get_jsoncode(10002,array(),'请重新登录');
+	    }
+	    $arr = array();
+	    if(!empty($user))
+	    {
+	        switch ($user->area)
+	        {
+	            case 'sy':
+	                $model = new LogisticsOrder();
+	                $arr = $model->getOrderInfo(Yii::$app->request->post('orderSn'));
+	                break;
+	            case 'dl':
+	                $model = new \frontend\modules\dl\models\LogisticsOrder();
+	                $arr = $model->getOrderInfo(Yii::$app->request->post('orderSn'));
+	                break;
+	            default:$arr = false;
+	                break;
+	        }
+	    }
+	    if($arr === false)
+	    {
+	        return $this->get_jsoncode(10003,array(),'数据为空');
+	    }
+	    return $this->get_jsoncode(10000,$arr,'成功');
 	}
+	
+
+	
+	/**
+	 * 扫码司机列表
+	 * @return string
+	 */
+	public function actionDriverlist()
+	{
+	    $arr['con'] = Yii::$app->params['city'];
+	    $arr['LogisticsRoute']['sameCity'] = array();
+	    $arr['LogisticsRoute']['sameCity2'] = array();
+	    $arr['user'] = array();
+	    if(Yii::$app->request->post('cityId'))
+	    {
+	        switch (Yii::$app->request->post('cityId'))
+	        {
+	            case '024':
+	                $model = new LogisticsRoute();
+	                $res = $model->driverlist(Yii::$app->request->post('logRouteId'));
+	                $arr['LogisticsRoute'] = $res['LogisticsRoute'];
+	                $arr['user'] = $res['user'];
+	                break;
+	            case '0411':
+	                $model = new \frontend\modules\dl\models\LogisticsRoute();
+	                $res = $model->driverlist(Yii::$app->request->post('logRouteId'));
+	                $arr['LogisticsRoute'] = $res['LogisticsRoute'];
+	                $arr['user'] = $res['user'];
+	                break;
+	            default:
+	                break;
+	        }
+	    }
+	    return $this->get_jsoncode(10000,$arr,'成功');
+	}
+	
+	/**
+	 * 扫码枪处理货物状态
+	 * @return string
+	 */
+	public function actionSetGoodsState()
+	{
+	    if(empty(Yii::$app->request->post('AppKey')) || empty(Yii::$app->request->post('goodsId')))
+	    {
+	        return $this->get_jsoncode(10001,array(),'参数错误');
+	    }
+	    
+	    $model = new UserAll();
+	    $user = $model->appLogin(Yii::$app->request->post('AppKey'), Yii::$app->request->post('appType'));
+	    if($user === 10004)
+	    {
+	        return $this->get_jsoncode(10004,array(),'其它司机正在送货中');
+	    }
+	    if(empty($user))
+	    {
+	        return $this->get_jsoncode(10002,array(),'请重新登录');
+	    }
+	    switch ($user->area)
+	    {
+	        case 'sy':
+	            $model = new Goods();
+	            $res = $model->upGoodsState(Yii::$app->request->post('goodsId'),$user->id,'ie');
+	            break;
+	        case 'dl':
+	            $model = new \frontend\modules\dl\models\Goods();
+	            $res = $model->upGoodsState(Yii::$app->request->post('goodsId'),$user->id,'ie');
+	            break;
+	        default:
+	            return $this->get_jsoncode(10003,array(),'处理失败');
+	            break;
+	    }
+	    if($res === false)
+	    {
+	        return $this->get_jsoncode(10003,array(),'处理失败');
+	    }
+	    return $this->get_jsoncode(10000,array(),'成功');
+	}
+	
     /**
 	* @Name  : 改变状态接口
 	* @Param : token
@@ -273,6 +432,285 @@ class TruckloadingController extends Controller
 	     return $this->get_jsoncode(10001,array(),'更新失败');
 	   }
 	}
+
+    /**
+     * 司机登录返回待扫码,待送货,已完成信息
+     * @Author:Fenghuan
+     */
+	public function actionGetRouteInfo()
+    {
+        $request = Yii::$app->request;
+
+        //总页数/第几页 初始为零
+        $totalCount = $offset = 0;
+        $limit = 10;
+
+        $date = $request->post('date');//格式: 年-月-日
+
+        $beginTime = strtotime(date('Y-m-d') . ' 00:00:00');
+        $endTime = strtotime(date('Y-m-d') . ' 23:59:59');
+
+        if (!empty($date)) {
+            $beginTime = strtotime($date . ' 00:00:00');
+            $endTime = strtotime($date . ' 23:59:59');
+        }
+
+        if(!empty($request->post('page') - 1)){
+            $offset = ($request->post('page') - 1) * $limit;
+        }
+
+        $list = $arr = [];
+
+        $order_state = $request->post('order_state');//订单状态
+        $state = $request->post('state');//订单二级状态
+        $token = $request->post('token');
+        $goods_state = $request->post('goods_state');//已扫码状态下传(goods.goods_state状态)
+        $model = new UserAll();
+        $modelAppLogin = new AppLogin();
+
+        //switch判断不同地区,实例化不同model
+
+        $user = $model->appLogin($token, 'driver');
+
+        if (!empty($user)) {
+            switch ($user->area) {
+                case 'sy':
+                    $modelLogisticsOrder = new LogisticsOrder();
+                    $modelLogisticsCar = new LogisticsCar();
+                    $modelDriver = new Driver();
+                    $param = Yii::$app->params['order_type'];
+//                    $modelAppLogin = new AppLogin();
+                    break;
+                case 'hlj':
+                    $modelLogisticsOrder = new \frontend\modules\hlj\models\LogisticsOrder();
+                    $modelLogisticsCar = new \frontend\modules\hlj\models\LogisticsCar();
+                    $modelDriver = new \frontend\modules\hlj\models\Driver();
+                    $param = Yii::$app->params['order_type_hlj'];
+//                    $modelAppLogin = new \frontend\modules\hlj\models\AppLogin();
+                    break;
+                case 'dl':
+                    $modelLogisticsOrder = new \frontend\modules\dl\models\LogisticsOrder();
+                    $modelLogisticsCar = new \frontend\modules\dl\models\LogisticsCar();
+                    $modelDriver = new \frontend\modules\dl\models\Driver();
+                    $param = Yii::$app->params['order_type_dl'];
+//                    $modelAppLogin = new \frontend\modules\dl\models\AppLogin();
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        if(empty($token)){
+            echo json_encode(['code' => 16000, 'datas' => [], 'msg' => '没有秘钥']);die;
+        }
+
+        $res = $modelAppLogin->SearchInfo(['token' => $token]);
+
+
+        if(empty($res)){
+            echo json_encode(['code' => 16001, 'datas' => [], 'msg' => '数据异常']);die;
+        }
+
+        $userId = $res->user_id;
+        $sameCity = $modelDriver->findOneModel(['member_id' => $userId])->logisticsCarInfo->car_type_id;
+
+
+        //待扫码:根据key获取user_id->logistics_route_id
+        if ((empty($order_state) || $order_state == 10) && empty($goods_state)) {
+            //同城外阜一样
+            //driver->logistics_car 获取线路id
+            $res1 = $modelDriver->findOneModel(['member_id' => $userId])->logisticsCarInfo;
+
+            if(!empty($res1)){
+                if(empty($res1->logistics_route_id)){
+                    echo json_encode(['code' => 16005, 'datas' => [], 'msg' => '没有线路']);die;
+                }
+            }
+            $where = ['logistics_route_id' => $res1->logistics_route_id, 'order_state' => 10, 'goods_state' => 10];
+
+            if($sameCity == 5)
+            {
+                $where = ['logistics_order.driver_member_id' => $userId, 'order_state' => 10, 'goods_state' => 10];
+            }
+            $ArrRes1 = $modelLogisticsOrder->getRouteArr(
+                'logistics_sn',
+                $where
+            );
+
+//            var_dump($ArrRes1);die;
+
+            $routeArr =  ArrayHelper::getColumn($ArrRes1, 'logistics_sn');
+            $condition = ['and',
+                ['in', 'logistics_sn',$routeArr],
+                ['order_state' => 10],
+                ['between', 'add_time', $beginTime, $endTime],
+                ['fast_route_id'=>0]
+            ];
+            if($sameCity == 5)
+            {
+                $condition = ['and',
+                    ['in', 'logistics_sn',$routeArr],
+                    ['order_state' => 10],
+                    ['between', 'add_time', $beginTime, $endTime],
+                    ['fast_route_id'=>1]
+                ];
+            }
+
+
+        }
+        //只要有商品扫码, 订单就进已扫码
+        else if ($order_state == 10 && $goods_state == 70){
+            //同城外阜一样
+            //driver->logistics_car 获取线路id
+            $res1 = $modelDriver->findOneModel(['member_id' => $userId])->logisticsCarInfo;
+
+            if(!empty($res1)){
+                if(empty($res1->logistics_route_id)){
+                    echo json_encode(['code' => 16005, 'datas' => [], 'msg' => '没有线路']);die;
+                }
+            }
+            $where = ['and', ['logistics_route_id' => $res1->logistics_route_id], ['order_state' => 10], ['in', 'goods_state', [50,70]]];
+
+            if($sameCity == 5)
+            {
+                $where = ['and',['logistics_order.driver_member_id' => $userId], ['order_state' => 10], ['in', 'goods_state', [50,70]]];
+            }
+            $ArrRes1 = $modelLogisticsOrder->getRouteArr(
+                'logistics_sn',
+                $where
+            );
+            $routeArr =  ArrayHelper::getColumn($ArrRes1, 'logistics_sn');
+            $condition = ['and',
+                ['in', 'logistics_sn',$routeArr],
+                ['order_state' => 10],
+                ['between', 'add_time', $beginTime, $endTime],
+                ['fast_route_id'=>0]
+            ];
+            if($sameCity == 5)
+            {
+                $condition = ['and',
+                    ['in', 'logistics_sn',$routeArr],
+                    ['order_state' => 10],
+                    ['between', 'add_time', $beginTime, $endTime],
+                    ['fast_route_id'=>1]
+                ];
+            }
+
+
+        }
+        //待送货,已完成:user_id->driver_member_id,
+        else if($order_state == 70 && $state == 2){
+            if($sameCity === 1){
+                $condition = ['and',
+                    ['driver_member_id' => $userId, 'order_state' => 70, 'state' => 2],
+                    ['between', 'add_time', $beginTime, $endTime],//有票号:原返,退货;
+                    ['return_logistics_sn' => ''],
+                ];
+            }
+            else if($sameCity === 2){
+                $condition = ['and',
+                    ['driver_member_id' => $userId, 'order_state' => 50],
+                    ['between', 'add_time', $beginTime, $endTime],
+                    ['return_logistics_sn' => ''],
+                ];
+            }
+
+
+        }
+        else if($order_state == 70 && $state == 6){
+            //同城外阜一样
+            $condition = ['and',
+                ['driver_member_id' => $userId, 'order_state' => 70, 'state' => 6],
+                ['between', 'add_time', $beginTime, $endTime],
+            ];
+        }
+
+        $resArr =  $modelLogisticsOrder->getOrders(
+            $condition,
+            [
+                'order_id',
+                'logistics_sn',
+                'receiving_name',
+                'receiving_phone',
+                'order_state',
+                'state',
+                'driver_member_id',
+                'logistics_route_id',
+                'add_time',
+                'order_type'
+            ],
+            $offset,
+            $limit,
+            ['order_id' => SORT_DESC]
+        );
+
+        if(!empty($resArr)){
+            foreach ($resArr as $k => $v){
+                $resArr[$k]['add_time'] = !empty($v['add_time']) ? date('Y-m-d H:i:s', $v['add_time']) : '';
+                $resArr[$k]['order_type'] = !empty($v['order_type']) ? $param[$v['order_type']] : '';
+            }
+        }
+
+        $totalCount =  $modelLogisticsOrder->getCountOrders(['order_id'], $condition);
+        $totalCount = ceil($totalCount/10);
+
+        $list['list'] = $resArr;
+        $list['totalCount'] = $totalCount;
+
+        echo json_encode(['code' => 200, 'datas' => $list, 'msg' => 'success']);
+
+    }
+
+
+    /**
+     * get-route-info的详情页
+     * @Author:Fenghuan
+     */
+    public function actionGetRouteView()
+    {
+        $request = Yii::$app->request;
+        $model = new UserAll();
+        $orderSn = $request->post('logistics_sn');
+
+        if(empty($orderSn) || empty($request->post('token'))){
+            echo json_encode(['code' => 16002, 'datas' => [], 'msg' => '缺少参数']);die;
+        }
+
+        $user = $model->appLogin($request->post('token'), 'driver');
+
+        $arr = array();
+        if (!empty($user)) {
+            switch ($user->area) {
+                case 'sy':
+                    $modelOrder = new LogisticsOrder();
+                    $arr = $modelOrder->getOrderInfo($orderSn);
+                    break;
+                case 'hlj':
+                    $modelOrder = new \frontend\modules\hlj\models\LogisticsOrder();
+                    $arr = $modelOrder->getOrderInfo($orderSn);
+                    break;
+                case 'dl':
+                    $modelOrder = new \frontend\modules\dl\models\LogisticsOrder();
+                    $arr = $modelOrder->getOrderInfo($orderSn);
+                    break;
+                default:
+                    $arr = false;
+                    break;
+            }
+        }
+
+        if (empty($arr)) {
+            echo json_encode(['code' => 16006, 'datas' => [], 'msg' => '没有数据']);die;
+        }
+        $arr['order']['add_time'] = !empty($arr['order']['add_time']) ? date('Y-m-d H:i:s', $arr['order']['add_time']) : '';
+
+
+        echo json_encode(['code' => 200, 'datas' => $arr, 'msg' => 'success']);
+
+    }
+    
+
+
 	/**
 	 * 判断扫码权限
 	 * @param unknown $goodsSn
@@ -432,8 +870,13 @@ class TruckloadingController extends Controller
       $info = $this->_areaType($areaType,$where, $sameCity);
       if(isset($type))//全国计算反货平均值
       {
-          $info['order']['whereInfo']['proportion']=$info['order']['whereInfo']['proportion']/count($areaType);
-          $info['order']['total']['proportion']=$info['order']['total']['proportion']/count($areaType);
+          if(count($areaType) > 1)
+          {
+              $info['order']['whereInfo']['proportion']=$info['order']['whereInfo']['proportion']/(count($areaType)-$info['aa']);
+          }else{
+              $info['order']['whereInfo']['proportion']=$info['order']['whereInfo']['proportion']/count($areaType);
+          }
+          $info['order']['total']['proportion']=round ($info['order']['total']['proportion']/count($areaType),1);
       }
       //     	$info['order'] = $model->getTotalInfo($where);
       //     	$info['Terminus'] = $modelTerminus->find()->select('terminus_id,terminus_name')->asArray()->all();
@@ -481,6 +924,15 @@ class TruckloadingController extends Controller
               }else{
                   $whereInfo[$k1] += $v1;
               }
+              if($k1 == 'proportion' && $v1 == 0)
+              {
+                  if(!isset($res['aa']))
+                  {
+                      $res['aa'] = 1;
+                  }else{
+                      $res['aa'] += 1;
+                  }
+              }
           }
           foreach ($res['order']['total'] as $k2 => $v2)
           {
@@ -516,7 +968,7 @@ class TruckloadingController extends Controller
           $info['Terminus']= $modelTerminus->find()->select('terminus_id,terminus_name')->all();
       }
       $info['LogisticsRoute'] = $modelLogisticsRoute->find()->select('logistics_route_id,logistics_route_name')->where($sameCity)->asArray()->all();
-      $info['areaType'] = array(array('id'=>'0','name'=>'全国'),array('id'=>'024', 'name'=>'沈阳'),array('id'=>'0451','name'=>'哈尔滨'), array('id'=>'0411','name'=>'大连'));//app获取地区信息
+      $info['areaType'] = Yii::$app->params['city'];//app获取地区信息
       return $info;
   }
   /**
@@ -609,6 +1061,12 @@ class TruckloadingController extends Controller
 			   $module = \Yii::$app->controller->module->getModule('dl');
 		       $msg = $module->runAction('truckloading/driver-change-status','');
 			   return $msg;
+		    }else if($user->area == 'hlj')
+		    {
+		        //进入hlj页面
+		        $module = \Yii::$app->controller->module->getModule('hlj');
+		        $msg = $module->runAction('truckloading/driver-change-status','');
+		        return $msg;
 		    }
 		 /*
 		 *===end===
@@ -666,6 +1124,13 @@ class TruckloadingController extends Controller
 		    {
 			  //进入dl页面
 			   $module = \Yii::$app->controller->module->getModule('dl');
+		       $msg = $module->runAction('truckloading/getisstart', '');
+			   return $msg;
+		    }
+			else if($user->area == 'hlj')
+		    {
+			  //进入hlj页面
+			   $module = \Yii::$app->controller->module->getModule('hlj');
 		       $msg = $module->runAction('truckloading/getisstart', '');
 			   return $msg;
 		    }

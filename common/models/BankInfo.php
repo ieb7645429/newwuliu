@@ -3,6 +3,7 @@
 namespace common\models;
 
 use Yii;
+// use function Faker\valid;
 
 /**
  * This is the model class for table "bank_info".
@@ -35,7 +36,7 @@ class BankInfo extends \yii\db\ActiveRecord
             [['user_id'], 'integer'],
             [['bank_info_card_no', 'bank_info_bank_address'], 'string', 'max' => 255],
             [['bank_info_account_name','bank_info_bank_name','bank_info_place'], 'string', 'max' => 155],
-			   [['user_id','bank_info_place'], 'unique'],
+			   [['user_id','bank_info_place','bank_info_card_no'], 'unique'],
         ];
     }
 
@@ -76,5 +77,22 @@ class BankInfo extends \yii\db\ActiveRecord
     public function getBankInfo($userId){
         $bankInfo = $this->find()->where(['user_id'=>$userId])->all();
         return $bankInfo;
+    }
+    
+    /**
+     * 判断银行卡号是否重复
+     */
+    public function issetBankInfoCardNo($bank_info_id,$bank_info_card_no){   
+    	$cdata = $this::find()->where(['bank_info_card_no'=>$bank_info_card_no])->all();
+    	if(count($cdata)>1){
+    		return true;
+    	}
+    	if(empty($cdata['0']['bank_info_id'])){
+    		return false;
+    	}
+    	if($cdata['0']['bank_info_id'] == $bank_info_id){
+    		return false;
+    	}
+    		return true;
     }
 }
